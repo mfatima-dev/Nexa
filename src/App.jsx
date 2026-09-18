@@ -1,9 +1,7 @@
+import AppRouter from './router/AppRouter.jsx'
+
 function App() {
-  return (
-    <div>
-      <p>Nexa foundation ready.</p>
-    </div>
-  )
+  return <AppRouter />
 }
 
 export default App
