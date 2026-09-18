@@ -1,0 +1,34 @@
+.date-range {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.date-range__option {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.date-range__option:hover {
+  color: var(--color-text);
+}
+
+.date-range__option--active {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.date-range__option--active:hover {
+  color: #fff;
+}

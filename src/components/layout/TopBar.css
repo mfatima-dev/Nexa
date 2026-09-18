@@ -116,6 +116,10 @@
     display: inline-flex;
   }
 
+  .topbar__left {
+    flex-shrink: 0;
+  }
+
   .topbar__search {
     flex: 1 1 auto;
     min-width: 0;

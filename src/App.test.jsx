@@ -12,7 +12,7 @@ describe('App shell', () => {
     )
 
     expect(screen.getByText('NEXA')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /orders/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Orders' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument()
   })
 })
