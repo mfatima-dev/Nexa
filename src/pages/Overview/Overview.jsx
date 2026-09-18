@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DollarSign, Package, ShoppingCart, Users } from 'lucide-react'
+import { useOrders } from '../../context/useOrders.js'
 import PageHeader from '../../components/common/PageHeader.jsx'
 import DateRangeControl from '../../components/common/DateRangeControl.jsx'
 import SectionCard from '../../components/common/SectionCard.jsx'
@@ -21,14 +22,15 @@ import { formatCurrency, formatCompactNumber } from '../../utils/format.js'
 import './Overview.css'
 
 function Overview() {
+  const { orders } = useOrders()
   const [range, setRange] = useState('30d')
 
-  const metrics = useMemo(() => computeOverviewMetrics(range), [range])
-  const revenueSeries = useMemo(() => buildRevenueSeries(range), [range])
+  const metrics = useMemo(() => computeOverviewMetrics(orders, range), [orders, range])
+  const revenueSeries = useMemo(() => buildRevenueSeries(orders, range), [orders, range])
   const catalogSummary = useMemo(() => getProductCatalogSummary(), [])
-  const topProducts = useMemo(() => getTopProducts(5), [])
-  const recentOrders = useMemo(() => getRecentOrders(6), [])
-  const recentActivity = useMemo(() => getRecentActivity(8), [])
+  const topProducts = useMemo(() => getTopProducts(orders, 5), [orders])
+  const recentOrders = useMemo(() => getRecentOrders(orders, 6), [orders])
+  const recentActivity = useMemo(() => getRecentActivity(orders, 8), [orders])
 
   return (
     <div className="overview">

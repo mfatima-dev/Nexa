@@ -1,0 +1,114 @@
+.orders-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.orders-toolbar__search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 240px;
+  min-width: 200px;
+  height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  transition: border-color var(--transition-fast);
+}
+
+.orders-toolbar__search:focus-within {
+  border-color: var(--color-accent);
+}
+
+.orders-toolbar__search-icon {
+  color: var(--color-text-subtle);
+  flex-shrink: 0;
+}
+
+.orders-toolbar__search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.orders-toolbar__search input::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.orders-toolbar__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 140px;
+}
+
+.orders-toolbar__field-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  font-weight: 600;
+}
+
+.orders-toolbar__field select {
+  height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.orders-toolbar__field select:focus-visible {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.orders-toolbar__field select:hover {
+  border-color: var(--color-border-strong);
+}
+
+.orders-toolbar__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.orders-toolbar__clear:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+@media (max-width: 720px) {
+  .orders-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .orders-toolbar__search {
+    flex: 0 0 auto;
+  }
+
+  .orders-toolbar__field {
+    min-width: 0;
+  }
+}

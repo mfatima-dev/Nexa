@@ -40,6 +40,11 @@
   color: var(--color-warning);
 }
 
+.activity-feed__icon--order_cancelled {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
 .activity-feed__content {
   flex: 1;
   min-width: 0;

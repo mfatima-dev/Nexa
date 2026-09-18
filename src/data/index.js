@@ -6,6 +6,9 @@ export { RANGE_OPTIONS } from './ranges.js'
 export {
   computeOverviewMetrics,
   getProductCatalogSummary,
+  getOrderStatusCounts,
+  getCustomerById,
+  getProductById,
   buildRevenueSeries,
   getTopProducts,
   getRecentOrders,

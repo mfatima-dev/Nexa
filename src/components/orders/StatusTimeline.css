@@ -1,0 +1,96 @@
+.status-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-timeline__step {
+  display: flex;
+  gap: var(--space-3);
+  position: relative;
+  padding-bottom: var(--space-5);
+}
+
+.status-timeline__step:last-child {
+  padding-bottom: 0;
+}
+
+.status-timeline__step::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.status-timeline__step:last-child::before {
+  display: none;
+}
+
+.status-timeline__step--done::before {
+  background: var(--color-accent);
+}
+
+.status-timeline__dot {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-raised);
+  color: var(--color-text-subtle);
+  border: 2px solid var(--color-border);
+  z-index: 1;
+}
+
+.status-timeline__dot--active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.status-timeline__dot--success {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+
+.status-timeline__dot--cancelled {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+}
+
+.status-timeline__dot--upcoming {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
+}
+
+.status-timeline__step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.status-timeline__step-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.status-timeline__step--upcoming .status-timeline__step-label {
+  color: var(--color-text-subtle);
+  font-weight: 500;
+}
+
+.status-timeline__step-date {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}

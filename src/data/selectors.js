@@ -1,4 +1,3 @@
-import { ORDERS } from './orders.js'
 import { PRODUCTS } from './products.js'
 import { CUSTOMERS } from './customers.js'
 import { RESTOCK_EVENTS } from './inventoryEvents.js'
@@ -7,6 +6,14 @@ import { daysAgo, formatDate } from '../utils/date.js'
 
 const productsById = new Map(PRODUCTS.map((product) => [product.id, product]))
 const customersById = new Map(CUSTOMERS.map((customer) => [customer.id, customer]))
+
+export function getCustomerById(customerId) {
+  return customersById.get(customerId) ?? null
+}
+
+export function getProductById(productId) {
+  return productsById.get(productId) ?? null
+}
 
 function getRangeConfig(rangeKey) {
   return RANGE_OPTIONS.find((option) => option.key === rangeKey) ?? RANGE_OPTIONS[1]
@@ -17,16 +24,16 @@ function withinWindow(dateStr, start, end) {
   return time > start.getTime() && time <= end.getTime()
 }
 
-function getOrdersInWindow(start, end) {
-  return ORDERS.filter((order) => withinWindow(order.placedAt, start, end))
+function getOrdersInWindow(orders, start, end) {
+  return orders.filter((order) => withinWindow(order.placedAt, start, end))
 }
 
 function sumRevenue(orders) {
   return orders.filter((order) => order.status !== 'Cancelled').reduce((sum, order) => sum + order.total, 0)
 }
 
-function getEarliestOrderDate() {
-  return ORDERS.reduce((earliest, order) => {
+function getEarliestOrderDate(orders) {
+  return orders.reduce((earliest, order) => {
     const placed = new Date(order.placedAt)
     return placed < earliest ? placed : earliest
   }, new Date())
@@ -37,16 +44,16 @@ function getEarliestOrderDate() {
  * preceding period of equal length. changePct is null when the dataset
  * doesn't extend far enough back to support a comparison (e.g. 12M).
  */
-export function computeOverviewMetrics(rangeKey, now = new Date()) {
+export function computeOverviewMetrics(orders, rangeKey, now = new Date()) {
   const { days } = getRangeConfig(rangeKey)
   const currentEnd = now
   const currentStart = daysAgo(days, now)
   const previousEnd = currentStart
   const previousStart = daysAgo(days, currentStart)
 
-  const currentOrders = getOrdersInWindow(currentStart, currentEnd)
-  const previousOrders = getOrdersInWindow(previousStart, previousEnd)
-  const earliestOrderDate = getEarliestOrderDate()
+  const currentOrders = getOrdersInWindow(orders, currentStart, currentEnd)
+  const previousOrders = getOrdersInWindow(orders, previousStart, previousEnd)
+  const earliestOrderDate = getEarliestOrderDate(orders)
   const previousWindowHasData = previousStart >= earliestOrderDate || previousOrders.length > 0
 
   function change(current, previous) {
@@ -76,6 +83,16 @@ export function getProductCatalogSummary() {
   const active = PRODUCTS.filter((product) => product.status === 'active').length
   const discontinued = PRODUCTS.filter((product) => product.status === 'discontinued').length
   return { total: PRODUCTS.length, active, discontinued }
+}
+
+/** Order counts by status, for the Orders page summary strip. */
+export function getOrderStatusCounts(orders) {
+  const counts = { Total: orders.length, Pending: 0, Processing: 0, Shipped: 0, Delivered: 0, Cancelled: 0 }
+  orders.forEach((order) => {
+    if (counts[order.status] === undefined) return
+    counts[order.status] += 1
+  })
+  return counts
 }
 
 function startOfDay(date) {
@@ -165,24 +182,24 @@ function buildMonthlySeries(orders, start, end) {
 }
 
 /** Revenue series for the Revenue Overview chart, bucketed to fit the selected range. */
-export function buildRevenueSeries(rangeKey, now = new Date()) {
+export function buildRevenueSeries(orders, rangeKey, now = new Date()) {
   const { days } = getRangeConfig(rangeKey)
   const naiveStart = daysAgo(days, now)
-  const earliestOrderDate = getEarliestOrderDate()
+  const earliestOrderDate = getEarliestOrderDate(orders)
   // Never render empty buckets for a time before the business had any orders.
   const start = naiveStart > earliestOrderDate ? naiveStart : earliestOrderDate
-  const orders = getOrdersInWindow(start, now).filter((order) => order.status !== 'Cancelled')
+  const windowOrders = getOrdersInWindow(orders, start, now).filter((order) => order.status !== 'Cancelled')
 
-  if (rangeKey === '12m') return buildMonthlySeries(orders, start, now)
-  if (rangeKey === '90d') return buildWeeklySeries(orders, start, now)
-  return buildDailySeries(orders, start, now)
+  if (rangeKey === '12m') return buildMonthlySeries(windowOrders, start, now)
+  if (rangeKey === '90d') return buildWeeklySeries(windowOrders, start, now)
+  return buildDailySeries(windowOrders, start, now)
 }
 
 /** Best-selling products by revenue, ranked from real order line items. */
-export function getTopProducts(limit = 5) {
+export function getTopProducts(orders, limit = 5) {
   const salesByProduct = new Map()
 
-  ORDERS.forEach((order) => {
+  orders.forEach((order) => {
     if (order.status === 'Cancelled') return
     order.items.forEach((item) => {
       const entry = salesByProduct.get(item.productId) ?? { unitsSold: 0, revenue: 0 }
@@ -208,8 +225,8 @@ export function getTopProducts(limit = 5) {
 }
 
 /** Most recent orders with the customer name resolved for display. */
-export function getRecentOrders(limit = 6) {
-  return [...ORDERS]
+export function getRecentOrders(orders, limit = 6) {
+  return [...orders]
     .sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))
     .slice(0, limit)
     .map((order) => ({
@@ -219,10 +236,10 @@ export function getRecentOrders(limit = 6) {
 }
 
 /** Recent activity feed: order lifecycle events plus inventory restocks, newest first. */
-export function getRecentActivity(limit = 8) {
+export function getRecentActivity(orders, limit = 8) {
   const events = []
 
-  ORDERS.forEach((order) => {
+  orders.forEach((order) => {
     const customerName = customersById.get(order.customerId)?.name ?? 'a customer'
 
     events.push({
@@ -231,6 +248,15 @@ export function getRecentActivity(limit = 8) {
       message: `Order ${order.id} placed by ${customerName}`,
       occurredAt: order.placedAt,
     })
+
+    if (order.processingAt) {
+      events.push({
+        id: `${order.id}-processing`,
+        type: 'order_processing',
+        message: `Order ${order.id} moved to processing`,
+        occurredAt: order.processingAt,
+      })
+    }
 
     if (order.shippedAt) {
       events.push({
@@ -247,6 +273,15 @@ export function getRecentActivity(limit = 8) {
         type: 'order_delivered',
         message: `Order ${order.id} delivered to ${customerName}`,
         occurredAt: order.deliveredAt,
+      })
+    }
+
+    if (order.cancelledAt) {
+      events.push({
+        id: `${order.id}-cancelled`,
+        type: 'order_cancelled',
+        message: `Order ${order.id} was cancelled`,
+        occurredAt: order.cancelledAt,
       })
     }
   })

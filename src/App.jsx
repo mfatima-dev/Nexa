@@ -1,7 +1,12 @@
 import AppRouter from './router/AppRouter.jsx'
+import { OrdersProvider } from './context/OrdersContext.jsx'
 
 function App() {
-  return <AppRouter />
+  return (
+    <OrdersProvider>
+      <AppRouter />
+    </OrdersProvider>
+  )
 }
 
 export default App
