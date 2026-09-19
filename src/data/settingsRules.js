@@ -50,13 +50,14 @@ export function isSelectableTheme(theme) {
   return THEME_OPTIONS.some((option) => option.value === theme && !option.disabled)
 }
 
-// Nexa has one theme, so each preference resolves to it. When a second theme exists, "system" is
-// where the device's colour-scheme preference would be read.
-const RESOLVED_THEMES = { dark: 'dark', system: 'dark' }
-
-/** The theme actually applied for a preference. Anything unknown falls back to Nexa's default. */
-export function resolveTheme(theme) {
-  return RESOLVED_THEMES[theme] ?? 'dark'
+/**
+ * The theme actually applied for a preference. "System" follows the device: pass whether it
+ * currently prefers light. Anything unknown falls back to Nexa's default, dark.
+ */
+export function resolveTheme(theme, systemPrefersLight = false) {
+  if (theme === 'light') return 'light'
+  if (theme === 'system') return systemPrefersLight ? 'light' : 'dark'
+  return 'dark'
 }
 
 /** The time zone this device is set to, which Nexa's pages currently use for every date. */

@@ -1,16 +1,20 @@
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import { useSettings } from '../../context/useSettings.js'
 import { THEME_OPTIONS } from '../../data/settingsDefaults.js'
 import ToggleSwitch from '../common/ToggleSwitch.jsx'
 import './AppearanceSettings.css'
 
+const THEME_NAMES = { dark: 'Dark', light: 'Light' }
+
 /**
- * Theme and motion. Nexa has one visual design, dark, so the theme choice never restyles the app:
- * "System" resolves to dark and "Light" is shown but unavailable. Reduce motion is a real switch
- * that turns off interface transitions (see styles/preferences.css).
+ * Theme and motion. Dark, Light and System are all live: choosing one restyles Nexa at once, and
+ * the choice is remembered in this browser. "System" follows the device's light or dark setting and
+ * keeps following it. The chosen card is marked with a check as well as colour. Reduce motion is a
+ * separate switch that turns off interface transitions (see styles/preferences.css).
  */
 function AppearanceSettings() {
-  const { settings, setAppearance } = useSettings()
+  const { settings, resolvedTheme, setAppearance } = useSettings()
   const { theme, reduceMotion } = settings.appearance
   const [announcement, setAnnouncement] = useState('')
 
@@ -28,26 +32,25 @@ function AppearanceSettings() {
     <div className="appearance-settings">
       <fieldset className="appearance-settings__themes">
         <legend>Theme</legend>
-        {THEME_OPTIONS.map((option) => (
-          <label
-            key={option.value}
-            className={`appearance-settings__theme${theme === option.value ? ' appearance-settings__theme--active' : ''}${
-              option.disabled ? ' appearance-settings__theme--disabled' : ''
-            }`}
-          >
-            <input
-              type="radio"
-              name="theme"
-              value={option.value}
-              checked={theme === option.value}
-              disabled={option.disabled}
-              onChange={() => handleTheme(option)}
-            />
-            <span className="appearance-settings__theme-label">{option.label}</span>
-            <span className="appearance-settings__theme-hint">{option.hint}</span>
-          </label>
-        ))}
+        {THEME_OPTIONS.map((option) => {
+          const selected = theme === option.value
+          return (
+            <label key={option.value} className={`appearance-settings__theme${selected ? ' appearance-settings__theme--active' : ''}`}>
+              <input type="radio" name="theme" value={option.value} checked={selected} onChange={() => handleTheme(option)} />
+              <span className="appearance-settings__theme-label">
+                {option.label}
+                {selected && <Check size={14} className="appearance-settings__check" aria-hidden="true" />}
+              </span>
+              <span className="appearance-settings__theme-hint">{option.hint}</span>
+            </label>
+          )
+        })}
       </fieldset>
+
+      {/* Polite live region: also announces the change when "System" follows the device on its own. */}
+      <p className="appearance-settings__current" aria-live="polite">
+        Showing the {THEME_NAMES[resolvedTheme]} theme{theme === 'system' ? ', following your device' : ''}.
+      </p>
 
       <div className="appearance-settings__motion">
         <ToggleSwitch

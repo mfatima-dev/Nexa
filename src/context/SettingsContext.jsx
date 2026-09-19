@@ -1,18 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { ADMIN_ACCOUNT, DEFAULT_SETTINGS } from '../data/settingsDefaults.js'
 import { isSelectableTheme, normalizeGeneral, resolveTheme, validateGeneral } from '../data/settingsRules.js'
+import { readStoredTheme, subscribeToSystemTheme, systemPrefersLight, writeStoredTheme } from '../data/themePreference.js'
 import { SettingsContext } from './settingsContextInstance.js'
 import '../styles/preferences.css'
 
+// The theme is the one setting that survives a reload (see themePreference.js); a saved choice wins
+// over the starting settings.
+function withStoredTheme(settings) {
+  const stored = readStoredTheme()
+  return stored ? { ...settings, appearance: { ...settings.appearance, theme: stored } } : settings
+}
+
 /**
- * Session-local settings for the workspace, kept apart from every business dataset.
+ * Settings for the workspace, kept apart from every business dataset.
  *
- * Nothing is persisted: a reload returns to `initialSettings`. To add persistence later, load saved
- * settings into `initialSettings` and save from `onChange`, which receives the complete settings
- * object after every successful change. The Settings UI does not need to change.
+ * Only the theme choice is remembered between visits (in this browser's localStorage). Everything
+ * else returns to `initialSettings` on reload, because Nexa has no backend to save it to. To add
+ * persistence later, load saved settings into `initialSettings` and save from `onChange`, which
+ * receives the complete settings object after every successful change. The Settings UI does not
+ * need to change.
  */
 export function SettingsProvider({ children, initialSettings = DEFAULT_SETTINGS, onChange }) {
-  const [settings, setSettings] = useState(initialSettings)
+  const [settings, setSettings] = useState(() => withStoredTheme(initialSettings))
   // When this browser session began, shown in the Account section.
   const [session] = useState(() => ({ startedAt: new Date().toISOString(), mode: 'demo' }))
 
@@ -53,34 +63,45 @@ export function SettingsProvider({ children, initialSettings = DEFAULT_SETTINGS,
     [commit],
   )
 
-  /** patch: { theme?, reduceMotion? }. An unavailable theme (e.g. Light) is refused. */
+  /** patch: { theme?, reduceMotion? }. An unknown theme is refused; a valid one is remembered. */
   const setAppearance = useCallback(
     (patch) => {
       const current = settingsRef.current
       if ('theme' in patch && !isSelectableTheme(patch.theme)) return { ok: false }
       if ('reduceMotion' in patch && typeof patch.reduceMotion !== 'boolean') return { ok: false }
 
+      if ('theme' in patch) writeStoredTheme(patch.theme)
       commit({ ...current, appearance: { ...current.appearance, ...patch } })
       return { ok: true }
     },
     [commit],
   )
 
-  // Apply the appearance preferences to the document, where the stylesheet reads them.
+  // The device's light/dark setting, live. It is always tracked but only used while "System" is chosen,
+  // so following the device never locks Nexa to either theme.
+  const deviceIsLight = useSyncExternalStore(subscribeToSystemTheme, systemPrefersLight)
   const { theme, reduceMotion } = settings.appearance
+  const resolvedTheme = resolveTheme(theme, deviceIsLight)
+
+  // Apply the appearance preferences to the document, where the stylesheets read them. They are
+  // only removed when the provider itself goes away, so a theme change never flashes an unstyled page.
   useEffect(() => {
     const root = document.documentElement
-    root.dataset.theme = resolveTheme(theme)
+    root.dataset.theme = resolvedTheme
     root.dataset.reduceMotion = String(reduceMotion)
-    return () => {
-      delete root.dataset.theme
-      delete root.dataset.reduceMotion
-    }
-  }, [theme, reduceMotion])
+  }, [resolvedTheme, reduceMotion])
+
+  useEffect(
+    () => () => {
+      delete document.documentElement.dataset.theme
+      delete document.documentElement.dataset.reduceMotion
+    },
+    [],
+  )
 
   const value = useMemo(
-    () => ({ settings, account: ADMIN_ACCOUNT, session, saveGeneral, setNotification, setAppearance }),
-    [settings, session, saveGeneral, setNotification, setAppearance],
+    () => ({ settings, resolvedTheme, account: ADMIN_ACCOUNT, session, saveGeneral, setNotification, setAppearance }),
+    [settings, resolvedTheme, session, saveGeneral, setNotification, setAppearance],
   )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>

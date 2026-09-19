@@ -4,6 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nexa</title>
+    <script>
+      // Apply the remembered theme before the first paint, so a reload never flashes the wrong one.
+      // This mirrors src/data/themePreference.js (same key, same rules); a test keeps them in step.
+      ;(function () {
+        var theme = 'dark'
+        try {
+          var saved = localStorage.getItem('nexa-theme')
+          if (saved === 'light') theme = 'light'
+          else if (saved === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'light'
+        } catch (error) {
+          // Storage blocked: stay on the default.
+        }
+        document.documentElement.setAttribute('data-theme', theme)
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

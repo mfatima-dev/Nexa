@@ -50,11 +50,11 @@ export const TIME_ZONE_OPTIONS = [
   { value: 'Pacific/Auckland', label: 'New Zealand Time (Auckland)' },
 ]
 
-/** Nexa ships a single dark theme. "System" resolves to it; "Light" is listed but unavailable. */
+/** "System" follows the operating system's light or dark setting, live. */
 export const THEME_OPTIONS = [
   { value: 'dark', label: 'Dark', hint: 'The Nexa default.' },
-  { value: 'system', label: 'System', hint: 'Follows your device. Nexa has one theme today, so this looks the same as Dark.' },
-  { value: 'light', label: 'Light', hint: 'Not available yet.', disabled: true },
+  { value: 'system', label: 'System', hint: 'Matches your device’s light or dark setting.' },
+  { value: 'light', label: 'Light', hint: 'A bright workspace for well-lit rooms.' },
 ]
 
 export const NOTIFICATION_OPTIONS = [

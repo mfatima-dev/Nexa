@@ -136,7 +136,7 @@
     position: fixed;
     inset: 0;
     z-index: 30;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--color-overlay);
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-base);

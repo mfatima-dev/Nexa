@@ -29,9 +29,10 @@ describe('the default settings', () => {
     })
   })
 
-  it('use only tokens and words from the existing design (no purple theme, one dark theme)', () => {
+  it('offer exactly three theme choices, all of them available', () => {
     expect(THEME_OPTIONS.map((option) => option.value)).toEqual(['dark', 'system', 'light'])
-    expect(THEME_OPTIONS.find((option) => option.value === 'light').disabled).toBe(true)
+    expect(THEME_OPTIONS.some((option) => option.disabled)).toBe(false)
+    THEME_OPTIONS.forEach((option) => expect(isSelectableTheme(option.value)).toBe(true))
   })
 })
 
@@ -121,18 +122,28 @@ describe('normalizing and comparing', () => {
 })
 
 describe('themes', () => {
-  it('lets the user pick Dark and System but not the unavailable Light', () => {
+  it('lets the user pick Dark, Light or System, and nothing else', () => {
     expect(isSelectableTheme('dark')).toBe(true)
+    expect(isSelectableTheme('light')).toBe(true)
     expect(isSelectableTheme('system')).toBe(true)
-    expect(isSelectableTheme('light')).toBe(false)
-    expect(isSelectableTheme('purple')).toBe(false)
+    ;['purple', '', undefined, null, 'DARK'].forEach((value) => expect(isSelectableTheme(value), String(value)).toBe(false))
   })
 
-  it('always resolves to Nexa’s dark theme', () => {
-    expect(resolveTheme('dark')).toBe('dark')
+  it('resolves Dark and Light to themselves, whatever the device prefers', () => {
+    ;[true, false].forEach((deviceIsLight) => {
+      expect(resolveTheme('dark', deviceIsLight)).toBe('dark')
+      expect(resolveTheme('light', deviceIsLight)).toBe('light')
+    })
+  })
+
+  it('resolves System to whatever the device prefers, and to dark when that is unknown', () => {
+    expect(resolveTheme('system', true)).toBe('light')
+    expect(resolveTheme('system', false)).toBe('dark')
     expect(resolveTheme('system')).toBe('dark')
-    expect(resolveTheme('light')).toBe('dark')
-    expect(resolveTheme(undefined)).toBe('dark')
+  })
+
+  it('falls back to Nexa’s dark default for anything it does not know', () => {
+    ;[undefined, null, '', 'purple'].forEach((value) => expect(resolveTheme(value, true), String(value)).toBe('dark'))
   })
 })
 

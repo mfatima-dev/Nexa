@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -54,10 +56,11 @@ describe('Settings page: structure', () => {
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(SECTION_TITLES)
   })
 
-  it('is upfront that changes last only for this session', () => {
+  it('is upfront about what is remembered (the theme) and what lasts only for this session', () => {
     renderSettings()
-    expect(screen.getByText(/Changes apply to this session only/)).toBeInTheDocument()
-    expect(screen.getByText(/Nexa doesn’t save data yet/)).toBeInTheDocument()
+    expect(screen.getByText(/Your theme is remembered in this browser/)).toBeInTheDocument()
+    expect(screen.getByText(/Other changes apply to this session only/)).toBeInTheDocument()
+    expect(screen.getByText(/Nexa doesn’t save business data yet/)).toBeInTheDocument()
   })
 
   it('has a section nav with a link to every section', () => {
@@ -324,33 +327,104 @@ describe('Notification settings', () => {
 })
 
 describe('Appearance settings', () => {
-  it('keeps Nexa dark by default, and offers System and an unavailable Light', () => {
+  it('keeps Nexa dark by default, and offers System and Light as real choices', () => {
     renderSettings()
     const themes = within(screen.getByRole('group', { name: 'Theme' }))
     expect(themes.getAllByRole('radio').map((radio) => radio.value)).toEqual(['dark', 'system', 'light'])
     expect(themes.getByRole('radio', { name: /^Dark/ })).toBeChecked()
     expect(themes.getByRole('radio', { name: /^System/ })).not.toBeChecked()
-    expect(themes.getByRole('radio', { name: /^Light/ })).toBeDisabled()
-    expect(themes.getByText('Not available yet.')).toBeInTheDocument()
+    expect(themes.getByRole('radio', { name: /^Light/ })).not.toBeChecked()
+    themes.getAllByRole('radio').forEach((radio) => expect(radio).toBeEnabled()) // none is disabled
+    expect(screen.queryByText('Not available yet.')).not.toBeInTheDocument()
     expect(document.documentElement.dataset.theme).toBe('dark')
   })
 
-  it('choosing System works, is announced, and keeps the one Nexa design', () => {
-    renderSettings()
+  it('choosing System works, is announced, and says what it currently resolves to', () => {
+    renderSettings() // no matchMedia in jsdom: the device is treated as dark
     fireEvent.click(screen.getByRole('radio', { name: /^System/ }))
 
     expect(screen.getByRole('radio', { name: /^System/ })).toBeChecked()
     expect(screen.getByRole('radio', { name: /^Dark/ })).not.toBeChecked()
     expect(within(section('Appearance')).getByText('Theme set to System.')).toBeInTheDocument()
-    expect(document.documentElement.dataset.theme).toBe('dark') // System resolves to the only theme
+    expect(within(section('Appearance')).getByText('Showing the Dark theme, following your device.')).toBeInTheDocument()
+    expect(document.documentElement.dataset.theme).toBe('dark')
   })
 
-  it('cannot switch to the unavailable Light theme', () => {
+  it('choosing Light restyles the app at once and is announced', () => {
     renderSettings()
     fireEvent.click(screen.getByRole('radio', { name: /^Light/ }))
-    expect(screen.getByRole('radio', { name: /^Light/ })).not.toBeChecked()
+
+    expect(screen.getByRole('radio', { name: /^Light/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /^Dark/ })).not.toBeChecked()
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(within(section('Appearance')).getByText('Theme set to Light.')).toBeInTheDocument()
+    expect(within(section('Appearance')).getByText('Showing the Light theme.')).toBeInTheDocument()
+  })
+
+  it('can go back to Dark from Light', () => {
+    renderSettings()
+    fireEvent.click(screen.getByRole('radio', { name: /^Light/ }))
+    fireEvent.click(screen.getByRole('radio', { name: /^Dark/ }))
     expect(screen.getByRole('radio', { name: /^Dark/ })).toBeChecked()
     expect(document.documentElement.dataset.theme).toBe('dark')
+  })
+
+  it('marks the chosen theme with a check as well as colour, on that card only', () => {
+    renderSettings()
+    const card = (name) => screen.getByRole('radio', { name }).closest('label')
+    const hasCheck = (name) => card(name).querySelector('.appearance-settings__check') !== null
+
+    expect([hasCheck(/^Dark/), hasCheck(/^System/), hasCheck(/^Light/)]).toEqual([true, false, false])
+    fireEvent.click(screen.getByRole('radio', { name: /^Light/ }))
+    expect([hasCheck(/^Dark/), hasCheck(/^System/), hasCheck(/^Light/)]).toEqual([false, false, true])
+    expect(card(/^Light/)).toHaveClass('appearance-settings__theme--active')
+  })
+
+  describe('keyboard access to the theme choice', () => {
+    const radios = () => within(screen.getByRole('group', { name: 'Theme' })).getAllByRole('radio')
+
+    it('is one labelled group of native radio buttons, which the browser moves through with the arrow keys', () => {
+      renderSettings()
+      const group = screen.getByRole('group', { name: 'Theme' })
+      expect(group.tagName).toBe('FIELDSET')
+      expect(group.querySelector('legend').textContent).toBe('Theme')
+      radios().forEach((radio) => {
+        expect(radio.tagName).toBe('INPUT')
+        expect(radio).toHaveAttribute('type', 'radio')
+        expect(radio).toHaveAttribute('name', 'theme') // same name: one group, one tab stop, arrow-key movement
+      })
+    })
+
+    it('every theme can take focus, and activating the focused one selects it', () => {
+      renderSettings()
+      ;['Light', 'System', 'Dark'].forEach((label) => {
+        const radio = screen.getByRole('radio', { name: new RegExp(`^${label}`) })
+        radio.focus()
+        expect(radio).toHaveFocus()
+        fireEvent.click(radio) // what Space, or an arrow key onto the radio, does natively
+        expect(radio).toBeChecked()
+      })
+      expect(document.documentElement.dataset.theme).toBe('dark')
+    })
+
+    it('comes before Reduce motion in the tab order, and nothing in it is skipped by tabindex', () => {
+      renderSettings()
+      const all = Array.from(document.querySelectorAll('input[name="theme"], [role="switch"]'))
+      const motion = all.indexOf(switchFor('Reduce motion'))
+      radios().forEach((radio) => {
+        expect(all.indexOf(radio)).toBeLessThan(motion)
+        expect(radio.tabIndex).toBeGreaterThanOrEqual(0)
+        expect(radio).not.toBeDisabled()
+      })
+    })
+
+    it('shows a visible focus ring around the whole card', () => {
+      const css = readFileSync(join(import.meta.dirname, '..', '..', 'components', 'settings', 'AppearanceSettings.css'), 'utf8')
+      const start = css.indexOf('.appearance-settings__theme:has(input:focus-visible) {')
+      expect(start).toBeGreaterThan(-1)
+      const rule = css.slice(start, css.indexOf('}', start))
+      expect(rule).toContain('outline: 2px solid var(--color-accent)')
+    })
   })
 
   it('Reduce motion is a working switch that changes the document preference', () => {

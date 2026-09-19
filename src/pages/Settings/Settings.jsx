@@ -25,8 +25,8 @@ function Settings() {
       <p className="settings__session-note">
         <Info size={16} aria-hidden="true" />
         <span>
-          Changes apply to this session only. Nexa doesn’t save data yet, so settings return to their defaults when you reload the
-          page.
+          Your theme is remembered in this browser. Other changes apply to this session only: Nexa doesn’t save business data yet,
+          so they return to their defaults when you reload the page.
         </span>
       </p>
 

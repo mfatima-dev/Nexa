@@ -117,18 +117,31 @@ describe('setAppearance', () => {
     expect(result.current.settings.appearance).toEqual({ theme: 'system', reduceMotion: true })
   })
 
-  it('refuses the unavailable Light theme, unknown themes and a non-boolean reduce motion', () => {
+  it('refuses unknown themes and a non-boolean reduce motion, changing nothing', () => {
     const { result } = setup()
-    let light
     let unknown
+    let empty
     let motion
     act(() => {
-      light = result.current.setAppearance({ theme: 'light' })
       unknown = result.current.setAppearance({ theme: 'purple' })
+      empty = result.current.setAppearance({ theme: '' })
       motion = result.current.setAppearance({ reduceMotion: 'sure' })
     })
-    expect([light.ok, unknown.ok, motion.ok]).toEqual([false, false, false])
+    expect([unknown.ok, empty.ok, motion.ok]).toEqual([false, false, false])
     expect(result.current.settings.appearance).toEqual(DEFAULT_SETTINGS.appearance)
+    expect(window.localStorage.getItem('nexa-theme')).toBeNull() // a refused choice is never remembered
+  })
+
+  it('accepts all three real themes', () => {
+    const { result } = setup()
+    ;['light', 'system', 'dark'].forEach((theme) => {
+      let outcome
+      act(() => {
+        outcome = result.current.setAppearance({ theme })
+      })
+      expect(outcome.ok, theme).toBe(true)
+      expect(result.current.settings.appearance.theme).toBe(theme)
+    })
   })
 
   it('applies the preferences to the document, and removes them when the provider goes away', () => {
@@ -140,7 +153,7 @@ describe('setAppearance', () => {
     act(() => {
       result.current.setAppearance({ theme: 'system', reduceMotion: true })
     })
-    expect(root.dataset.theme).toBe('dark') // System resolves to the one theme Nexa has
+    expect(root.dataset.theme).toBe('dark') // System, with no device preference to read, stays on the default
     expect(root.dataset.reduceMotion).toBe('true')
 
     unmount()
