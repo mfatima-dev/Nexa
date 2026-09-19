@@ -1,4 +1,4 @@
-.orders-empty {
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -7,7 +7,7 @@
   padding: var(--space-8) var(--space-4);
 }
 
-.orders-empty__icon {
+.empty-state__icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,19 +19,19 @@
   margin-bottom: var(--space-2);
 }
 
-.orders-empty__title {
+.empty-state__title {
   font-size: var(--text-md);
   font-weight: 600;
   color: var(--color-text);
 }
 
-.orders-empty__description {
+.empty-state__description {
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
   max-width: 320px;
 }
 
-.orders-empty__clear {
+.empty-state__action {
   margin-top: var(--space-3);
   height: 36px;
   padding: 0 var(--space-4);
@@ -44,6 +44,6 @@
   transition: background var(--transition-fast);
 }
 
-.orders-empty__clear:hover {
+.empty-state__action:hover {
   background: var(--color-accent-hover);
 }

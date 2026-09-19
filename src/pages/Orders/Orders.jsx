@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useOrders } from '../../context/useOrders.js'
 import PageHeader from '../../components/common/PageHeader.jsx'
 import SectionCard from '../../components/common/SectionCard.jsx'
+import Pagination from '../../components/common/Pagination.jsx'
+import EmptyState from '../../components/common/EmptyState.jsx'
 import OrdersSummary from '../../components/orders/OrdersSummary.jsx'
 import OrdersToolbar from '../../components/orders/OrdersToolbar.jsx'
 import OrdersList from '../../components/orders/OrdersList.jsx'
-import OrdersPagination from '../../components/orders/OrdersPagination.jsx'
-import OrdersEmptyState from '../../components/orders/OrdersEmptyState.jsx'
 import OrderDetailsDrawer from '../../components/orders/OrderDetailsDrawer.jsx'
 import { DEFAULT_FILTERS, filterAndSortOrders, paginateOrders } from '../../components/orders/ordersQuery.js'
 import { getOrderStatusCounts } from '../../data/index.js'
@@ -16,9 +17,13 @@ const PAGE_SIZE = 10
 
 function Orders() {
   const { orders, updateOrderStatus } = useOrders()
-  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // `?q=` pre-fills the search box (e.g. "all orders for this customer" links);
+  // `?order=` opens that order's drawer, so other pages can deep-link into it.
+  const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS, search: searchParams.get('q') ?? '' }))
   const [page, setPage] = useState(1)
-  const [selectedOrderId, setSelectedOrderId] = useState(null)
+  const selectedOrderId = searchParams.get('order')
 
   const statusCounts = useMemo(() => getOrderStatusCounts(orders), [orders])
   const filteredOrders = useMemo(() => filterAndSortOrders(orders, filters), [orders, filters])
@@ -32,6 +37,21 @@ function Orders() {
   const selectedOrder = useMemo(
     () => orders.find((order) => order.id === selectedOrderId) ?? null,
     [orders, selectedOrderId],
+  )
+
+  const selectOrder = useCallback(
+    (orderId) => {
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current)
+          if (orderId) next.set('order', orderId)
+          else next.delete('order')
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
   )
 
   function handleFilterChange(patch) {
@@ -59,17 +79,22 @@ function Orders() {
       <SectionCard title="Orders" subtitle={`${filteredOrders.length} of ${orders.length} orders`}>
         {pageItems.length > 0 ? (
           <>
-            <OrdersList orders={pageItems} onSelectOrder={setSelectedOrderId} />
-            <OrdersPagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+            <OrdersList orders={pageItems} onSelectOrder={selectOrder} />
+            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
           </>
         ) : (
-          <OrdersEmptyState onClear={handleClearFilters} />
+          <EmptyState
+            title="No orders match your filters"
+            description="Try adjusting your search or filter criteria."
+            actionLabel="Clear filters"
+            onAction={handleClearFilters}
+          />
         )}
       </SectionCard>
 
       <OrderDetailsDrawer
         order={selectedOrder}
-        onClose={() => setSelectedOrderId(null)}
+        onClose={() => selectOrder(null)}
         onUpdateStatus={updateOrderStatus}
       />
     </div>

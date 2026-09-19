@@ -1,11 +1,11 @@
-.orders-toolbar {
+.filter-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--space-3);
 }
 
-.orders-toolbar__search {
+.filter-toolbar__search {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -19,16 +19,16 @@
   transition: border-color var(--transition-fast);
 }
 
-.orders-toolbar__search:focus-within {
+.filter-toolbar__search:focus-within {
   border-color: var(--color-accent);
 }
 
-.orders-toolbar__search-icon {
+.filter-toolbar__search-icon {
   color: var(--color-text-subtle);
   flex-shrink: 0;
 }
 
-.orders-toolbar__search input {
+.filter-toolbar__search input {
   width: 100%;
   border: none;
   background: transparent;
@@ -37,24 +37,24 @@
   color: var(--color-text);
 }
 
-.orders-toolbar__search input::placeholder {
+.filter-toolbar__search input::placeholder {
   color: var(--color-text-subtle);
 }
 
-.orders-toolbar__field {
+.filter-toolbar__field {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   min-width: 140px;
 }
 
-.orders-toolbar__field-label {
+.filter-toolbar__field-label {
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
   font-weight: 600;
 }
 
-.orders-toolbar__field select {
+.filter-toolbar__field select {
   height: 38px;
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
@@ -65,16 +65,16 @@
   transition: border-color var(--transition-fast);
 }
 
-.orders-toolbar__field select:focus-visible {
+.filter-toolbar__field select:focus-visible {
   border-color: var(--color-accent);
   outline: none;
 }
 
-.orders-toolbar__field select:hover {
+.filter-toolbar__field select:hover {
   border-color: var(--color-border-strong);
 }
 
-.orders-toolbar__clear {
+.filter-toolbar__clear {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -92,23 +92,24 @@
     border-color var(--transition-fast);
 }
 
-.orders-toolbar__clear:hover {
+.filter-toolbar__clear:hover {
   background: var(--color-surface-raised);
   color: var(--color-text);
   border-color: var(--color-border-strong);
 }
 
 @media (max-width: 720px) {
-  .orders-toolbar {
+  .filter-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .orders-toolbar__search {
+  /* In a column layout the flex-basis would become a height, so reset it. */
+  .filter-toolbar__search {
     flex: 0 0 auto;
   }
 
-  .orders-toolbar__field {
+  .filter-toolbar__field {
     min-width: 0;
   }
 }

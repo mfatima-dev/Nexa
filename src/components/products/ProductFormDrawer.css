@@ -1,0 +1,17 @@
+.product-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.product-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 420px) {
+  .product-form__row {
+    grid-template-columns: 1fr;
+  }
+}

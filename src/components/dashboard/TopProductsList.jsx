@@ -12,7 +12,7 @@ function TopProductsList({ items }) {
       {items.map((entry, index) => (
         <li key={entry.product.id}>
           <Link
-            to="/products"
+            to={`/products?product=${entry.product.id}`}
             className="top-products__item"
             aria-label={`View ${entry.product.name} in Products`}
           >

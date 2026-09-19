@@ -1,5 +1,5 @@
 import { PRODUCTS } from './products.js'
-import { CUSTOMERS } from './customers.js'
+import { SEED_CUSTOMERS } from './customerSeed.js'
 import { createSeededRandom } from '../utils/seededRandom.js'
 
 const random = createSeededRandom(7)
@@ -40,7 +40,13 @@ function buildOrderItems() {
     const product = pick(PRODUCTS)
     if (chosenIds.has(product.id)) continue
     chosenIds.add(product.id)
-    items.push({ productId: product.id, quantity: randomInt(1, 3), unitPrice: product.price })
+    // Name and unit price are snapshots: order history stays readable if the product is later deleted.
+    items.push({
+      productId: product.id,
+      productName: product.name,
+      quantity: randomInt(1, 3),
+      unitPrice: product.price,
+    })
   }
 
   return items
@@ -55,7 +61,7 @@ function buildRawOrder() {
   const status = pickStatus(dayOffset)
   const items = buildOrderItems()
   const total = Number(items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0).toFixed(2))
-  const customer = pick(CUSTOMERS)
+  const customer = pick(SEED_CUSTOMERS)
 
   let shippedAt = null
   let deliveredAt = null

@@ -1,14 +1,14 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import './OrdersPagination.css'
+import './Pagination.css'
 
-function OrdersPagination({ page, totalPages, onPageChange }) {
+function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null
 
   return (
-    <div className="orders-pagination">
+    <div className="pagination">
       <button
         type="button"
-        className="orders-pagination__button"
+        className="pagination__button"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
       >
@@ -16,13 +16,13 @@ function OrdersPagination({ page, totalPages, onPageChange }) {
         Previous
       </button>
 
-      <span className="orders-pagination__indicator">
+      <span className="pagination__indicator">
         Page {page} of {totalPages}
       </span>
 
       <button
         type="button"
-        className="orders-pagination__button"
+        className="pagination__button"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
       >
@@ -33,4 +33,4 @@ function OrdersPagination({ page, totalPages, onPageChange }) {
   )
 }
 
-export default OrdersPagination
+export default Pagination

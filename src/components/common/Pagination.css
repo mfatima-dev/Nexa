@@ -1,4 +1,4 @@
-.orders-pagination {
+.pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6,7 +6,7 @@
   padding-top: var(--space-4);
 }
 
-.orders-pagination__button {
+.pagination__button {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -24,18 +24,18 @@
     border-color var(--transition-fast);
 }
 
-.orders-pagination__button:hover:not(:disabled) {
+.pagination__button:hover:not(:disabled) {
   background: var(--color-surface-raised);
   color: var(--color-text);
   border-color: var(--color-border-strong);
 }
 
-.orders-pagination__button:disabled {
+.pagination__button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.orders-pagination__indicator {
+.pagination__indicator {
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
 }

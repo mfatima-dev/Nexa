@@ -1,18 +1,13 @@
-import { PRODUCTS } from './products.js'
 import { CUSTOMERS } from './customers.js'
 import { RESTOCK_EVENTS } from './inventoryEvents.js'
 import { RANGE_OPTIONS } from './ranges.js'
+import { getMargin, getStockLevel } from './productRules.js'
 import { daysAgo, formatDate } from '../utils/date.js'
 
-const productsById = new Map(PRODUCTS.map((product) => [product.id, product]))
 const customersById = new Map(CUSTOMERS.map((customer) => [customer.id, customer]))
 
 export function getCustomerById(customerId) {
   return customersById.get(customerId) ?? null
-}
-
-export function getProductById(productId) {
-  return productsById.get(productId) ?? null
 }
 
 function getRangeConfig(rangeKey) {
@@ -79,10 +74,66 @@ export function computeOverviewMetrics(orders, rangeKey, now = new Date()) {
  * catalog doesn't have a "vs prior period" reading the way revenue/orders/
  * customers do, so this intentionally returns no changePct.
  */
-export function getProductCatalogSummary() {
-  const active = PRODUCTS.filter((product) => product.status === 'active').length
-  const discontinued = PRODUCTS.filter((product) => product.status === 'discontinued').length
-  return { total: PRODUCTS.length, active, discontinued }
+export function getProductCatalogSummary(products) {
+  const active = products.filter((product) => product.status === 'active').length
+  const discontinued = products.filter((product) => product.status === 'discontinued').length
+  return { total: products.length, active, discontinued }
+}
+
+/**
+ * Sales per product id, from real order lines. Cancelled orders don't count as sales.
+ * Uses the unit price captured on the order, so later price edits never rewrite history.
+ */
+export function getProductSales(orders) {
+  const sales = new Map()
+
+  orders.forEach((order) => {
+    if (order.status === 'Cancelled') return
+    order.items.forEach((item) => {
+      const entry = sales.get(item.productId) ?? { unitsSold: 0, revenue: 0, orderCount: 0 }
+      entry.unitsSold += item.quantity
+      entry.revenue += item.quantity * item.unitPrice
+      entry.orderCount += 1
+      sales.set(item.productId, entry)
+    })
+  })
+
+  return sales
+}
+
+/** One entry per product with its derived sales, stock level and margin. */
+export function getProductStats(products, orders) {
+  const sales = getProductSales(orders)
+
+  return products.map((product) => {
+    const sold = sales.get(product.id)
+    return {
+      product,
+      unitsSold: sold?.unitsSold ?? 0,
+      revenue: roundCurrency(sold?.revenue ?? 0),
+      orderCount: sold?.orderCount ?? 0,
+      stockLevel: getStockLevel(product),
+      margin: getMargin(product),
+    }
+  })
+}
+
+/** Headline numbers for the Products page. Low/out-of-stock alerts only concern active products. */
+export function getProductSummary(products) {
+  const active = products.filter((product) => product.status === 'active')
+  const levels = active.map(getStockLevel)
+  const margins = active.map(getMargin)
+
+  return {
+    total: products.length,
+    active: active.length,
+    discontinued: products.length - active.length,
+    unitsInStock: products.reduce((sum, product) => sum + product.stock, 0),
+    inventoryValue: roundCurrency(products.reduce((sum, product) => sum + product.stock * product.cost, 0)),
+    lowStock: levels.filter((level) => level === 'Low stock').length,
+    outOfStock: levels.filter((level) => level === 'Out of stock').length,
+    averageMargin: margins.length ? margins.reduce((sum, value) => sum + value, 0) / margins.length : 0,
+  }
 }
 
 /** Order counts by status, for the Orders page summary strip. */
@@ -93,6 +144,74 @@ export function getOrderStatusCounts(orders) {
     counts[order.status] += 1
   })
   return counts
+}
+
+// A customer is "Active" if they placed an order within this many days.
+export const ACTIVE_CUSTOMER_WINDOW_DAYS = 90
+
+function roundCurrency(value) {
+  return Number(value.toFixed(2))
+}
+
+/**
+ * Per-customer statistics computed from the live orders.
+ *  - orderCount: every order the customer placed (matches the Orders page)
+ *  - totalSpent / averageOrderValue: exclude cancelled orders (matches Overview revenue)
+ *  - status: Active (ordered recently) | Inactive (ordered, but not recently) | No orders
+ */
+export function getCustomerStats(orders, now = new Date()) {
+  const ordersByCustomer = new Map()
+  orders.forEach((order) => {
+    const list = ordersByCustomer.get(order.customerId) ?? []
+    list.push(order)
+    ordersByCustomer.set(order.customerId, list)
+  })
+
+  const activeCutoff = daysAgo(ACTIVE_CUSTOMER_WINDOW_DAYS, now)
+
+  return CUSTOMERS.map((customer) => {
+    const customerOrders = ordersByCustomer.get(customer.id) ?? []
+    const paidOrders = customerOrders.filter((order) => order.status !== 'Cancelled')
+    const totalSpent = roundCurrency(paidOrders.reduce((sum, order) => sum + order.total, 0))
+
+    const lastOrderAt = customerOrders.reduce(
+      (latest, order) => (!latest || new Date(order.placedAt) > new Date(latest) ? order.placedAt : latest),
+      null,
+    )
+
+    let status = 'No orders'
+    if (lastOrderAt) status = new Date(lastOrderAt) >= activeCutoff ? 'Active' : 'Inactive'
+
+    return {
+      customer,
+      orderCount: customerOrders.length,
+      totalSpent,
+      averageOrderValue: paidOrders.length ? roundCurrency(totalSpent / paidOrders.length) : 0,
+      lastOrderAt,
+      status,
+    }
+  })
+}
+
+/** Headline numbers for the Customers page, derived from getCustomerStats output. */
+export function getCustomerSummary(stats) {
+  const purchasingCustomers = stats.filter((entry) => entry.totalSpent > 0).length
+  const totalRevenue = roundCurrency(stats.reduce((sum, entry) => sum + entry.totalSpent, 0))
+
+  return {
+    totalCustomers: stats.length,
+    customersWithOrders: stats.filter((entry) => entry.orderCount > 0).length,
+    activeCustomers: stats.filter((entry) => entry.status === 'Active').length,
+    totalRevenue,
+    averageCustomerValue: purchasingCustomers ? roundCurrency(totalRevenue / purchasingCustomers) : 0,
+  }
+}
+
+/** A customer's orders, newest first. */
+export function getCustomerOrders(orders, customerId) {
+  return orders
+    .filter((order) => order.customerId === customerId)
+    .sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))
 }
 
 function startOfDay(date) {
@@ -195,21 +314,11 @@ export function buildRevenueSeries(orders, rangeKey, now = new Date()) {
   return buildDailySeries(windowOrders, start, now)
 }
 
-/** Best-selling products by revenue, ranked from real order line items. */
-export function getTopProducts(orders, limit = 5) {
-  const salesByProduct = new Map()
+/** Best-selling products by revenue. Products deleted from the catalog no longer appear. */
+export function getTopProducts(orders, products, limit = 5) {
+  const productsById = new Map(products.map((product) => [product.id, product]))
 
-  orders.forEach((order) => {
-    if (order.status === 'Cancelled') return
-    order.items.forEach((item) => {
-      const entry = salesByProduct.get(item.productId) ?? { unitsSold: 0, revenue: 0 }
-      entry.unitsSold += item.quantity
-      entry.revenue += item.quantity * item.unitPrice
-      salesByProduct.set(item.productId, entry)
-    })
-  })
-
-  const ranked = Array.from(salesByProduct.entries())
+  const ranked = Array.from(getProductSales(orders).entries())
     .map(([productId, stats]) => ({
       product: productsById.get(productId),
       unitsSold: stats.unitsSold,
@@ -236,8 +345,9 @@ export function getRecentOrders(orders, limit = 6) {
 }
 
 /** Recent activity feed: order lifecycle events plus inventory restocks, newest first. */
-export function getRecentActivity(orders, limit = 8) {
+export function getRecentActivity(orders, products, limit = 8) {
   const events = []
+  const productsById = new Map(products.map((product) => [product.id, product]))
 
   orders.forEach((order) => {
     const customerName = customersById.get(order.customerId)?.name ?? 'a customer'
@@ -288,10 +398,11 @@ export function getRecentActivity(orders, limit = 8) {
 
   RESTOCK_EVENTS.forEach((event) => {
     const product = productsById.get(event.productId)
+    if (!product) return // the product was deleted from the catalog
     events.push({
       id: event.id,
       type: 'inventory_restocked',
-      message: `${product?.name ?? 'Product'} restocked (+${event.quantity} units)`,
+      message: `${product.name} restocked (+${event.quantity} units)`,
       occurredAt: event.occurredAt,
     })
   })

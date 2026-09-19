@@ -1,11 +1,23 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render as rtlRender, screen } from '@testing-library/react'
+import { ProductsProvider } from '../../context/ProductsContext.jsx'
 import OrderDetailsDrawer from './OrderDetailsDrawer.jsx'
 
 vi.mock('../../data/selectors.js', () => ({
   getCustomerById: () => ({ name: 'Sarah Bennett', email: 'sarah.bennett@gmail.com', city: 'Austin', state: 'TX' }),
-  getProductById: (id) => ({ id, name: id === 'p01' ? 'Urban Backpack' : 'Travel Organizer' }),
 }))
+
+const CATALOG = [
+  { id: 'p01', name: 'Urban Backpack' },
+  { id: 'p02', name: 'Travel Organizer' },
+]
+
+// The drawer resolves product names from the live catalog, so every render needs the provider.
+function render(ui, catalog = CATALOG) {
+  return rtlRender(ui, {
+    wrapper: ({ children }) => <ProductsProvider initialProducts={catalog}>{children}</ProductsProvider>,
+  })
+}
 
 const order = {
   id: 'NX-1042',
@@ -64,6 +76,20 @@ describe('OrderDetailsDrawer', () => {
     } else {
       expect(screen.queryByRole('button', { name: 'Cancel order' })).not.toBeInTheDocument()
     }
+  })
+
+  it('shows the live product name, and falls back to the name captured on the order', () => {
+    const items = [
+      { productId: 'p01', productName: 'Old Backpack Name', quantity: 1, unitPrice: 89 },
+      { productId: 'p99', productName: 'Discontinued Gadget', quantity: 1, unitPrice: 10 },
+    ]
+    render(<OrderDetailsDrawer order={{ ...order, items }} onClose={vi.fn()} onUpdateStatus={vi.fn()} />)
+
+    // p01 still exists (renamed since the order): show today's name.
+    expect(screen.getByText('Urban Backpack')).toBeInTheDocument()
+    expect(screen.queryByText('Old Backpack Name')).not.toBeInTheDocument()
+    // p99 was deleted from the catalog: the order keeps its own snapshot.
+    expect(screen.getByText('Discontinued Gadget')).toBeInTheDocument()
   })
 
   it('calls onUpdateStatus with the next status and with Cancelled', () => {

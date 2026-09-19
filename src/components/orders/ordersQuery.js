@@ -1,4 +1,5 @@
 import { getCustomerById } from '../../data/selectors.js'
+import { paginate } from '../../utils/paginate.js'
 
 export const STATUS_FILTER_OPTIONS = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
 
@@ -75,14 +76,6 @@ export function filterAndSortOrders(orders, filters, now = new Date()) {
   return filtered.sort((a, b) => compareOrders(a, b, filters.sort))
 }
 
-/** Simple client-side pagination. Page is clamped to a valid range. */
 export function paginateOrders(orders, page, pageSize) {
-  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize))
-  const safePage = Math.min(Math.max(1, page), totalPages)
-  const start = (safePage - 1) * pageSize
-  return {
-    pageItems: orders.slice(start, start + pageSize),
-    totalPages,
-    page: safePage,
-  }
+  return paginate(orders, page, pageSize)
 }

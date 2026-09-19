@@ -1,22 +1,20 @@
 import FilterToolbar from '../common/FilterToolbar.jsx'
-import { DATE_FILTER_OPTIONS, SORT_OPTIONS, STATUS_FILTER_OPTIONS, hasActiveFilters } from './ordersQuery.js'
+import { SORT_OPTIONS, STATUS_FILTER_OPTIONS, hasActiveFilters } from './customersQuery.js'
 
 const STATUS_OPTIONS = STATUS_FILTER_OPTIONS.map((status) => ({ value: status, label: status }))
-const DATE_OPTIONS = DATE_FILTER_OPTIONS.map((option) => ({ value: option.key, label: option.label }))
 const SORT_SELECT_OPTIONS = SORT_OPTIONS.map((option) => ({ value: option.key, label: option.label }))
 
-function OrdersToolbar({ filters, onChange, onClear }) {
+function CustomersToolbar({ filters, onChange, onClear }) {
   return (
     <FilterToolbar
       search={{
         value: filters.search,
         onChange: (search) => onChange({ search }),
-        placeholder: 'Search by order ID or customer…',
-        ariaLabel: 'Search orders by ID or customer name',
+        placeholder: 'Search by name or email…',
+        ariaLabel: 'Search customers by name or email',
       }}
       fields={[
         { key: 'status', label: 'Status', value: filters.status, options: STATUS_OPTIONS, onChange: (status) => onChange({ status }) },
-        { key: 'date', label: 'Date', value: filters.dateRange, options: DATE_OPTIONS, onChange: (dateRange) => onChange({ dateRange }) },
         { key: 'sort', label: 'Sort', value: filters.sort, options: SORT_SELECT_OPTIONS, onChange: (sort) => onChange({ sort }) },
       ]}
       showClear={hasActiveFilters(filters)}
@@ -25,4 +23,4 @@ function OrdersToolbar({ filters, onChange, onClear }) {
   )
 }
 
-export default OrdersToolbar
+export default CustomersToolbar

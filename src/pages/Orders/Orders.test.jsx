@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { OrdersProvider } from '../../context/OrdersContext.jsx'
+import { ProductsProvider } from '../../context/ProductsContext.jsx'
+import { CUSTOMERS } from '../../data/customers.js'
 import Orders from './Orders.jsx'
 
-function renderOrders() {
+function renderOrders(initialEntry = '/orders') {
   return render(
-    <OrdersProvider>
-      <Orders />
-    </OrdersProvider>,
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <ProductsProvider>
+        <OrdersProvider>
+          <Orders />
+        </OrdersProvider>
+      </ProductsProvider>
+    </MemoryRouter>,
   )
 }
 
@@ -149,5 +156,33 @@ describe('Orders page status changes', () => {
     expect(within(dialog).queryByRole('button', { name: /mark as/i })).not.toBeInTheDocument()
     expect(within(dialog).queryByRole('button', { name: 'Cancel order' })).not.toBeInTheDocument()
     expect(dialog.querySelector('.status-timeline__step--cancelled')).not.toBeNull()
+  })
+})
+
+describe('Orders page deep links', () => {
+  it('opens the drawer for ?order=<id>, and Escape closes it', () => {
+    renderOrders('/orders?order=NX-1000')
+
+    expect(screen.getByRole('dialog', { name: 'Order NX-1000' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document.activeElement, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // The list stays usable underneath.
+    expect(screen.getAllByRole('button', { name: /view order/i }).length).toBeGreaterThan(0)
+  })
+
+  it('ignores an unknown ?order id', () => {
+    renderOrders('/orders?order=NX-99999')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('pre-fills the search from ?q= and filters the list', () => {
+    const name = CUSTOMERS[0].name
+    renderOrders(`/orders?q=${encodeURIComponent(name)}`)
+
+    expect(screen.getByRole('searchbox', { name: /search orders/i })).toHaveValue(name)
+    const rows = screen.getAllByRole('button', { name: /view order/i })
+    expect(rows.length).toBeGreaterThan(0)
+    rows.forEach((row) => expect(row.getAttribute('aria-label')).toContain(name))
   })
 })
