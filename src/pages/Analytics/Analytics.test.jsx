@@ -125,7 +125,7 @@ describe('Analytics page', () => {
     )
   })
 
-  it('counts cancelled orders as orders but not as revenue, average order value or units', () => {
+  it('counts cancelled orders as orders but not as revenue or average order value, and units only once shipped', () => {
     renderAnalytics()
     pickRange('90D')
 
@@ -136,12 +136,16 @@ describe('Analytics page', () => {
     expect(cancelled).toBeGreaterThan(0) // the seed really does include cancelled orders in this range
 
     const revenue = paid.reduce((sum, order) => sum + order.total, 0)
-    const units = paid.reduce((sum, order) => sum + order.items.reduce((n, item) => n + item.quantity, 0), 0)
+    const unitsIn = (list) => list.reduce((sum, order) => sum + order.items.reduce((n, item) => n + item.quantity, 0), 0)
+    const shipped = paid.filter((order) => order.status === 'Shipped' || order.status === 'Delivered')
+    const units = unitsIn(shipped)
+    expect(unitsIn(paid)).toBeGreaterThan(units) // the seed really does have unshipped paid orders in this range
     expect(cardValue('Revenue')).toBe(formatCurrency(revenue))
     expect(cardValue('Orders')).toBe(formatCompactNumber(inWindow.length)) // includes the cancelled ones
     expect(cardValue('Average Order Value')).toBe(formatCurrency(revenue / paid.length, { decimals: 2 }))
     expect(cardValue('Units Sold')).toBe(formatCompactNumber(units))
     expect(screen.getByText(new RegExp(`including ${cancelled} cancelled in this period`))).toBeInTheDocument()
+    expect(screen.getByText(/Units sold counts only orders that have shipped/)).toBeInTheDocument()
   })
 
   it('agrees with what the Overview page says for the same range', () => {

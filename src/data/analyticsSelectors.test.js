@@ -565,3 +565,69 @@ describe('the real seeded data', () => {
     expect(JSON.stringify({ ORDERS, PRODUCTS, CUSTOMERS })).toBe(before)
   })
 })
+
+// Business rule: "Units Sold" means units on orders that have shipped (Shipped or Delivered), the same
+// definition Products and Inventory use. Revenue still counts every paid order, shipped or not.
+describe('Analytics units sold count only shipped orders', () => {
+  const STATUS_UNITS = [
+    ['Pending', 1],
+    ['Processing', 2],
+    ['Shipped', 4],
+    ['Delivered', 8],
+    ['Cancelled', 16],
+  ]
+  const MIXED = STATUS_UNITS.map(([status, quantity], index) => order(`u${index}`, at(0, 9 + index), status, [line('p1', quantity, 50)]))
+  const SHIPPED_UNITS = 4 + 8
+
+  it.each(STATUS_UNITS)('%s order: units sold reflect only shipped orders (%i units on the order)', (status, quantity) => {
+    const orders = [order('only', at(0), status, [line('p1', quantity, 50)])]
+    const shipped = status === 'Shipped' || status === 'Delivered'
+    expect(getAnalyticsMetrics(orders, [], '7d', NOW).unitsSold.value).toBe(shipped ? quantity : 0)
+    expect(sum(buildAnalyticsSeries(orders, [], '7d', NOW), (point) => point.unitsSold)).toBe(shipped ? quantity : 0)
+    expect(getTopProductsInRange(orders, CATALOG, '7d', 5, NOW)[0]?.unitsSold ?? 0).toBe(shipped ? quantity : 0)
+    expect(sum(getCategoryPerformance(orders, CATALOG, '7d', NOW), (row) => row.unitsSold)).toBe(shipped ? quantity : 0)
+  })
+
+  it('adds up only the shipped and delivered orders in every view of the same range', () => {
+    const metrics = getAnalyticsMetrics(MIXED, [], '7d', NOW)
+    expect(metrics.unitsSold.value).toBe(SHIPPED_UNITS)
+    expect(sum(buildAnalyticsSeries(MIXED, [], '7d', NOW), (point) => point.unitsSold)).toBe(SHIPPED_UNITS)
+    expect(getTopProductsInRange(MIXED, CATALOG, '7d', 5, NOW)[0].unitsSold).toBe(SHIPPED_UNITS)
+    expect(sum(getCategoryPerformance(MIXED, CATALOG, '7d', NOW), (row) => row.unitsSold)).toBe(SHIPPED_UNITS)
+  })
+
+  it('leaves revenue, orders and average order value on the paid-order definition', () => {
+    const metrics = getAnalyticsMetrics(MIXED, [], '7d', NOW)
+    expect(metrics.revenue.value).toBe(15 * 50) // pending, processing, shipped and delivered: 1 + 2 + 4 + 8 units at $50
+    expect(metrics.orders).toMatchObject({ value: 5, cancelled: 1 })
+    expect(metrics.averageOrderValue.value).toBe((15 * 50) / 4)
+  })
+
+  it('compares against the previous period on the same definition', () => {
+    const orders = [
+      order('now', at(1), 'Shipped', [line('p1', 3, 50)]),
+      order('now-pending', at(2), 'Pending', [line('p1', 30, 50)]),
+      order('before', at(9), 'Delivered', [line('p1', 2, 50)]),
+      order('before-processing', at(10), 'Processing', [line('p1', 20, 50)]),
+    ]
+    const { unitsSold } = getAnalyticsMetrics(orders, [], '7d', NOW)
+    expect(unitsSold.value).toBe(3)
+    expect(unitsSold.previous).toBe(2)
+    expect(unitsSold.changePct).toBeCloseTo(50)
+  })
+
+  it('keeps the "Removed products" row, and the revenue total, when the only sale of a deleted product is unshipped', () => {
+    const orders = [order('gone', at(1), 'Pending', [line('p2', 2, 80)]), order('kept', at(1), 'Delivered', [line('p1', 1, 50)])]
+    const withoutP2 = CATALOG.filter((item) => item.id !== 'p2')
+    const rows = getCategoryPerformance(orders, withoutP2, '7d', NOW)
+
+    expect(rows.find((row) => row.category === REMOVED_PRODUCTS_LABEL)).toMatchObject({ revenue: 160, unitsSold: 0 })
+    expect(sum(rows, (row) => row.revenue)).toBe(getAnalyticsMetrics(orders, [], '7d', NOW).revenue.value)
+  })
+
+  it('still hides the "Removed products" row when nothing was sold under it', () => {
+    const orders = [order('kept', at(1), 'Delivered', [line('p1', 1, 50)])]
+    const rows = getCategoryPerformance(orders, CATALOG.filter((item) => item.id !== 'p2'), '7d', NOW)
+    expect(rows.some((row) => row.category === REMOVED_PRODUCTS_LABEL)).toBe(false)
+  })
+})

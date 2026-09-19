@@ -73,8 +73,8 @@ function Analytics() {
       </div>
 
       <p className="analytics__note">
-        Revenue, average order value, units sold, products and categories count paid orders only. Orders counts every
-        order placed, including {metrics.orders.cancelled} cancelled in this period.
+        Revenue, average order value, products and categories count paid orders only. Units sold counts only orders that
+        have shipped. Orders counts every order placed, including {metrics.orders.cancelled} cancelled in this period.
       </p>
 
       <SectionCard

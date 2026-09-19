@@ -31,8 +31,16 @@ describe('getInventoryStats', () => {
     expect(byId('b').stockValue).toBe(0)
   })
 
-  it('counts units sold from non-cancelled orders', () => {
-    expect(byId('a').unitsSold).toBe(4)
+  it('counts units sold from shipped and delivered orders only', () => {
+    expect(byId('a').unitsSold).toBe(4) // the delivered order; the cancelled one is out
+    const unshipped = getInventoryStats(catalog, [
+      order('1', 'Pending', [line('a', 1)]),
+      order('2', 'Processing', [line('a', 2)]),
+      order('3', 'Shipped', [line('a', 4)]),
+      order('4', 'Delivered', [line('a', 8)]),
+      order('5', 'Cancelled', [line('a', 16)]),
+    ])
+    expect(unshipped.find((entry) => entry.product.id === 'a').unitsSold).toBe(12) // 4 + 8
   })
 
   it('reports the stock status, treating discontinued products as discontinued rather than alerting', () => {

@@ -3,6 +3,7 @@ import { PRODUCTS } from './products.js'
 import { SEED_INVENTORY_MOVEMENTS } from './inventoryMovements.js'
 import { ORDERS } from './orders.js'
 import {
+  countsAsUnitsSold,
   getProductCatalogSummary,
   getProductSales,
   getProductStats,
@@ -33,8 +34,9 @@ const ORDERS_FIXTURE = [
 describe('getProductSales', () => {
   const sales = getProductSales(ORDERS_FIXTURE)
 
-  it('sums units and revenue from order lines using the price captured on the order', () => {
-    expect(sales.get('a')).toEqual({ unitsSold: 3, revenue: 290, orderCount: 2 })
+  it('sums revenue from order lines using the price captured on the order, and units only from shipped orders', () => {
+    // Alpha: 2 units on a delivered order (200) plus 1 on a pending one (90). Revenue counts both; units are only sold once shipped.
+    expect(sales.get('a')).toEqual({ unitsSold: 2, revenue: 290, orderCount: 2 })
     expect(sales.get('c')).toEqual({ unitsSold: 1, revenue: 20, orderCount: 1 })
   })
 
@@ -43,11 +45,51 @@ describe('getProductSales', () => {
   })
 })
 
+// Business rule: units are sold once the order has shipped (the moment stock leaves). Pending and
+// Processing orders are not sold yet, and Cancelled orders never are.
+describe('Units sold counts only shipped orders', () => {
+  it.each([
+    ['Pending', 0],
+    ['Processing', 0],
+    ['Shipped', 3],
+    ['Delivered', 3],
+    ['Cancelled', 0],
+  ])('%s order: %i units sold', (status, units) => {
+    const orders = [order('1', status, [line('a', 3, 100)])]
+
+    expect(getProductSales(orders).get('a')?.unitsSold ?? 0).toBe(units)
+    expect(getProductStats(catalog, orders).find((entry) => entry.product.id === 'a').unitsSold).toBe(units)
+    expect(countsAsUnitsSold(orders[0])).toBe(units > 0)
+  })
+
+  it('still counts the revenue of unshipped paid orders, and never of cancelled ones', () => {
+    const revenueOf = (status) => getProductStats(catalog, [order('1', status, [line('a', 3, 100)])])[0].revenue
+    expect(['Pending', 'Processing', 'Shipped', 'Delivered'].map(revenueOf)).toEqual([300, 300, 300, 300])
+    expect(revenueOf('Cancelled')).toBe(0)
+  })
+
+  it('adds up only the shipped and delivered orders when a product has a mix', () => {
+    const orders = [
+      order('1', 'Pending', [line('a', 1, 100)]),
+      order('2', 'Processing', [line('a', 2, 100)]),
+      order('3', 'Shipped', [line('a', 4, 100)]),
+      order('4', 'Delivered', [line('a', 8, 100)]),
+      order('5', 'Cancelled', [line('a', 16, 100)]),
+    ]
+    expect(getProductSales(orders).get('a')).toEqual({ unitsSold: 12, revenue: 1500, orderCount: 4 })
+  })
+
+  it('moves the units into sold when the order ships, and not when it merely moves along', () => {
+    const unitsAfter = (status) => getProductSales([order('1', status, [line('a', 5, 100)])]).get('a').unitsSold
+    expect([unitsAfter('Pending'), unitsAfter('Processing'), unitsAfter('Shipped'), unitsAfter('Delivered')]).toEqual([0, 0, 5, 5])
+  })
+})
+
 describe('getProductStats', () => {
   it('adds sales, stock level and margin to each product', () => {
     const stats = getProductStats(catalog, ORDERS_FIXTURE)
     const alpha = stats.find((e) => e.product.id === 'a')
-    expect(alpha).toMatchObject({ unitsSold: 3, revenue: 290, orderCount: 2, stockLevel: 'Low stock' })
+    expect(alpha).toMatchObject({ unitsSold: 2, revenue: 290, orderCount: 2, stockLevel: 'Low stock' })
     expect(alpha.margin).toBeCloseTo(0.6)
 
     const beta = stats.find((e) => e.product.id === 'b')

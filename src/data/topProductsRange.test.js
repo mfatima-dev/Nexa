@@ -68,7 +68,7 @@ describe('getTopProducts with an Overview range', () => {
   it('keeps the existing ranking output: revenue order, units, and bar shares relative to the leader', () => {
     const thirty = getTopProducts(ORDERS, CATALOG, 5, '30d', NOW)
     expect(thirty.map((entry) => entry.revenue)).toEqual([200, 120, 50])
-    expect(thirty.map((entry) => entry.unitsSold)).toEqual([20, 2, 1])
+    expect(thirty.map((entry) => entry.unitsSold)).toEqual([20, 2, 0]) // the last sale is still Processing: revenue, but no units sold yet
     expect(thirty.map((entry) => entry.share)).toEqual([1, 0.6, 0.25])
     expect(thirty[0].product).toBe(CATALOG.find((p) => p.id === 'edge'))
   })

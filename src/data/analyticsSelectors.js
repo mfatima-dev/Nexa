@@ -2,7 +2,7 @@ import { CUSTOMERS } from './customers.js'
 import { getInventoryStatus } from './inventorySelectors.js'
 import { getStockLevel } from './productRules.js'
 import { PRODUCT_CATEGORIES } from './products.js'
-import { getOrdersInWindow, getProductSales, getRangeConfig, withinWindow } from './selectors.js'
+import { countsAsUnitsSold, getOrdersInWindow, getProductSales, getRangeConfig, withinWindow } from './selectors.js'
 import { daysAgo, formatDate } from '../utils/date.js'
 import { formatCurrency } from '../utils/format.js'
 
@@ -10,7 +10,8 @@ import { formatCurrency } from '../utils/format.js'
  * Analytics selectors. Everything is derived from the shared orders, products and customers, and
  * follows the same rules as the rest of Nexa:
  *  - the window is (now - N days, now], exactly as on the Overview page;
- *  - revenue, average order value, units sold and product/category sales exclude cancelled orders;
+ *  - revenue, average order value and product/category revenue exclude cancelled orders;
+ *  - units sold count only orders that have shipped (Shipped or Delivered), as on Products and Inventory;
  *  - "orders" counts every order placed (as on the Orders and Overview pages), with the cancelled
  *    ones reported separately so nothing is hidden.
  */
@@ -86,7 +87,9 @@ function summarizeOrders(orders) {
     placed: orders.length,
     cancelled: orders.length - sold.length,
     soldCount: sold.length,
-    unitsSold: sold.reduce((sum, order) => sum + order.items.reduce((units, item) => units + item.quantity, 0), 0),
+    unitsSold: sold
+      .filter(countsAsUnitsSold)
+      .reduce((sum, order) => sum + order.items.reduce((units, item) => units + item.quantity, 0), 0),
     averageOrderValue: sold.length ? roundCurrency(revenue / sold.length) : 0,
   }
 }
@@ -220,7 +223,7 @@ export function buildAnalyticsSeries(orders, customers, rangeKey, now = new Date
     }
     bucket.activeOrders += 1
     bucket.revenue += order.total
-    bucket.unitsSold += order.items.reduce((units, item) => units + item.quantity, 0)
+    if (countsAsUnitsSold(order)) bucket.unitsSold += order.items.reduce((units, item) => units + item.quantity, 0)
   })
 
   customers.forEach((customer) => {
@@ -308,7 +311,8 @@ export function getCategoryPerformance(orders, products, rangeKey, now = new Dat
   }
 
   const removed = rows.get(REMOVED_PRODUCTS_LABEL)
-  if (removed && removed.unitsSold === 0) rows.delete(REMOVED_PRODUCTS_LABEL)
+  // Units can be 0 while revenue isn't (unshipped orders), so the row is kept whenever it has revenue.
+  if (removed && removed.revenue === 0) rows.delete(REMOVED_PRODUCTS_LABEL)
 
   const list = Array.from(rows.values()).map((entry) => ({
     ...entry,

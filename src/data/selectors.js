@@ -80,7 +80,17 @@ export function getProductCatalogSummary(products) {
 }
 
 /**
- * Sales per product id, from real order lines. Cancelled orders don't count as sales.
+ * Whether an order's units count as sold. Units are sold once the order has shipped, which is also
+ * when stock leaves the warehouse: Shipped and Delivered only. Pending and Processing orders are not
+ * sold yet, and Cancelled orders never are. This is the one definition of "Units Sold" in Nexa.
+ */
+export function countsAsUnitsSold(order) {
+  return order.status === 'Shipped' || order.status === 'Delivered'
+}
+
+/**
+ * Sales per product id, from real order lines. Cancelled orders don't count as sales. Revenue and
+ * orderCount include every paid (non-cancelled) order; unitsSold only counts orders that have shipped.
  * Uses the unit price captured on the order, so later price edits never rewrite history.
  */
 export function getProductSales(orders) {
@@ -90,7 +100,7 @@ export function getProductSales(orders) {
     if (order.status === 'Cancelled') return
     order.items.forEach((item) => {
       const entry = sales.get(item.productId) ?? { unitsSold: 0, revenue: 0, orderCount: 0 }
-      entry.unitsSold += item.quantity
+      if (countsAsUnitsSold(order)) entry.unitsSold += item.quantity
       entry.revenue += item.quantity * item.unitPrice
       entry.orderCount += 1
       sales.set(item.productId, entry)
