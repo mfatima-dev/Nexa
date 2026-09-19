@@ -4,6 +4,7 @@ import { Link, MemoryRouter } from 'react-router-dom'
 import App from '../../App.jsx'
 import { OrdersProvider } from '../../context/OrdersContext.jsx'
 import { ProductsProvider } from '../../context/ProductsContext.jsx'
+import { getCommittedUnits } from '../../data/availability.js'
 import { ORDERS } from '../../data/orders.js'
 import { PRODUCTS } from '../../data/products.js'
 import { getProductStats, getProductSummary, getTopProducts } from '../../data/selectors.js'
@@ -531,5 +532,74 @@ describe('Products connected to the rest of Nexa', () => {
     renderApp('/')
     fireEvent.click(topRow(topName))
     expect(screen.getByRole('dialog', { name: topName })).toBeInTheDocument()
+  })
+})
+
+// The provider refuses to take stock below the units committed to open orders. The form has to say so.
+describe('Products page: the stock floor', () => {
+  // A real seed product that open (Pending or Processing) orders have already reserved units of.
+  const target = PRODUCTS.find((product) => product.status === 'active' && getCommittedUnits(product.id, ORDERS) >= 2)
+  const committed = getCommittedUnits(target.id, ORDERS)
+  const message = `${committed} units are committed to open orders. On hand can’t go below ${committed}.`
+
+  function openEditForm() {
+    render(
+      <MemoryRouter initialEntries={['/products']}>
+        <App />
+      </MemoryRouter>,
+    )
+    setValue(searchBox(), target.name)
+    const { dialog } = openProduct(target.name)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Edit' }))
+    return screen.getByRole('dialog', { name: `Edit ${target.name}` })
+  }
+
+  const stockField = (form) => within(form).getByLabelText(/units in stock/i)
+  const save = (form) => fireEvent.click(within(form).getByRole('button', { name: 'Save changes' }))
+
+  it('shows the provider’s message on the stock field when the reduction is refused, and keeps the form open', () => {
+    const form = openEditForm()
+    setValue(stockField(form), String(committed - 1))
+    save(form)
+
+    const dialog = screen.getByRole('dialog', { name: `Edit ${target.name}` })
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(message)
+    expect(stockField(dialog)).toHaveAttribute('aria-invalid', 'true')
+    expect(stockField(dialog)).toHaveValue(committed - 1)
+    expect(within(dialog).getByRole('button', { name: 'Save changes' })).toBeInTheDocument()
+  })
+
+  it('clears the message when the stock is edited, and then saves a reduction down to the committed units', () => {
+    const form = openEditForm()
+    setValue(stockField(form), String(committed - 1))
+    save(form)
+    expect(within(form).getByRole('alert')).toHaveTextContent(message)
+
+    setValue(stockField(form), String(committed))
+    expect(within(form).queryByText(message)).not.toBeInTheDocument()
+    save(form)
+
+    expect(screen.getByText(`Saved changes to “${target.name}”.`)).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: target.name })).toBeInTheDocument()
+  })
+
+  it('keeps the existing local messages: an empty stock shows its own message, not the provider’s', () => {
+    const form = openEditForm()
+    setValue(stockField(form), String(committed - 1))
+    save(form)
+    expect(within(form).getByText(message)).toBeInTheDocument()
+
+    setValue(stockField(form), '')
+    save(form)
+
+    expect(within(form).getByText('Enter the units in stock.')).toBeInTheDocument()
+    expect(within(form).queryByText(message)).not.toBeInTheDocument()
+  })
+
+  it('does not block editing other fields when the stock is left alone', () => {
+    const form = openEditForm()
+    setValue(within(form).getByLabelText(/product name/i), `${target.name} Plus`)
+    save(form)
+    expect(screen.getByText(`Saved changes to “${target.name} Plus”.`)).toBeInTheDocument()
   })
 })

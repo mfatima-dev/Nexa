@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PRODUCTS } from '../data/products.js'
+import { getStockReductionError } from '../data/availability.js'
 import { SEED_INVENTORY_MOVEMENTS } from '../data/inventoryMovements.js'
 import { validateAdjustment, validateRestock } from '../data/inventoryRules.js'
 import {
@@ -18,20 +19,34 @@ import { ProductsContext } from './productsContextInstance.js'
  *   / fulfillOrder (an order shipped).
  * Actions re-validate, so invalid data can never enter shared state, and return
  * { ok, errors?, product?, movement? } for the calling form.
+ * Stock can't be manually reduced below the units committed to open orders, so this provider needs to
+ * read the orders. It doesn't know the orders provider: `getOrders()` is injected (see BusinessProviders),
+ * the same way the orders provider is handed `onOrderShipped`. `getProducts()` hands the freshest products
+ * to the orders provider, which validates a new order against them.
  * `initialProducts` / `initialMovements` exist so tests can start from a known state.
  */
+const NO_ORDERS = () => []
+
 export function ProductsProvider({
   children,
   initialProducts = PRODUCTS,
   initialMovements = SEED_INVENTORY_MOVEMENTS,
+  getOrders = NO_ORDERS,
 }) {
   const [products, setProducts] = useState(initialProducts)
   const [movements, setMovements] = useState(initialMovements)
   const productsRef = useRef(products)
   const movementsRef = useRef(movements)
+  const getOrdersRef = useRef(getOrders)
+
+  useEffect(() => {
+    getOrdersRef.current = getOrders
+  })
   // Never decreases, so deleting a product can't free its id for reuse (orders still reference it).
   const highestIdRef = useRef(highestProductNumber(initialProducts))
   const movementCounterRef = useRef(0)
+
+  const getProducts = useCallback(() => productsRef.current, [])
 
   const commit = useCallback((nextProducts, nextMovements = movementsRef.current) => {
     productsRef.current = nextProducts
@@ -77,6 +92,9 @@ export function ProductsProvider({
       if (Object.keys(errors).length > 0) return { ok: false, errors }
 
       const product = { ...existing, ...normalizeProductValues(values) }
+      const floorError = getStockReductionError(productId, existing.stock, product.stock, getOrdersRef.current())
+      if (floorError) return { ok: false, errors: { stock: floorError } }
+
       // Editing the stock field is a stock change like any other, so it goes in the ledger.
       const change = product.stock - existing.stock
       const logged =
@@ -136,6 +154,9 @@ export function ProductsProvider({
       if (Object.keys(errors).length > 0) return { ok: false, errors }
 
       const newQuantity = Number(values.newQuantity)
+      const floorError = getStockReductionError(productId, existing.stock, newQuantity, getOrdersRef.current())
+      if (floorError) return { ok: false, errors: { newQuantity: floorError } }
+
       const movement = newMovement({
         productId,
         reason: 'adjustment',
@@ -194,6 +215,7 @@ export function ProductsProvider({
     () => ({
       products,
       movements,
+      getProducts,
       addProduct,
       updateProduct,
       deleteProduct,
@@ -201,7 +223,17 @@ export function ProductsProvider({
       adjustProductStock,
       fulfillOrder,
     }),
-    [products, movements, addProduct, updateProduct, deleteProduct, restockProduct, adjustProductStock, fulfillOrder],
+    [
+      products,
+      movements,
+      getProducts,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+      restockProduct,
+      adjustProductStock,
+      fulfillOrder,
+    ],
   )
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>

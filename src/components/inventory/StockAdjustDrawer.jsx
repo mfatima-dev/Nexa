@@ -28,6 +28,9 @@ function StockAdjustDrawer({ product, initialType = 'restock', onSubmit, onCance
   const [edited, setEdited] = useState({})
   const [touched, setTouched] = useState({})
   const [submitted, setSubmitted] = useState(false)
+  // Errors only the provider can know about (e.g. stock can’t go below the units committed to open orders).
+  // They are shown when the local checks have nothing to say, and go away as soon as the field is edited.
+  const [providerErrors, setProviderErrors] = useState({})
 
   const errors = useMemo(
     () =>
@@ -36,11 +39,12 @@ function StockAdjustDrawer({ product, initialType = 'restock', onSubmit, onCance
         : validateAdjustment(values, product.stock),
     [type, values, product.stock],
   )
-  const visibleError = (field) => (submitted || touched[field] ? errors[field] : undefined)
+  const visibleError = (field) => (submitted || touched[field] ? (errors[field] ?? providerErrors[field]) : undefined)
 
   function handleChange(field) {
     return (event) => {
       setEdited((current) => ({ ...current, [field]: true }))
+      setProviderErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== field)))
       setValues((current) => ({ ...current, [field]: event.target.value }))
     }
   }
@@ -64,6 +68,8 @@ function StockAdjustDrawer({ product, initialType = 'restock', onSubmit, onCance
     const result = onSubmit(type, values)
     if (result && !result.ok && result.errors) {
       setTouched(Object.fromEntries(Object.keys(result.errors).map((field) => [field, true])))
+      setProviderErrors(result.errors)
+      requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
     }
   }
 

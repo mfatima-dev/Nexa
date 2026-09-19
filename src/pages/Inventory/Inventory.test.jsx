@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import App from '../../App.jsx'
 import { OrdersProvider } from '../../context/OrdersContext.jsx'
 import { ProductsProvider } from '../../context/ProductsContext.jsx'
+import { getCommittedUnits } from '../../data/availability.js'
 import { ORDERS } from '../../data/orders.js'
 import { PRODUCTS } from '../../data/products.js'
 import { SEED_INVENTORY_MOVEMENTS } from '../../data/inventoryMovements.js'
@@ -502,5 +503,83 @@ describe('Inventory shares one source of truth with the rest of Nexa', () => {
     await waitFor(() =>
       expect(within(metric('Total Units')).getByText(units(summary.unitsInStock - keyPouch.stock))).toBeInTheDocument(),
     )
+  })
+})
+
+// The provider refuses to take stock below the units committed to open orders. The form has to say so.
+describe('Inventory page: the stock floor', () => {
+  // A real seed product that open (Pending or Processing) orders have already reserved units of.
+  const target = PRODUCTS.find((product) => product.status === 'active' && getCommittedUnits(product.id, ORDERS) >= 2)
+  const committed = getCommittedUnits(target.id, ORDERS)
+  const message = `${committed} units are committed to open orders. On hand can’t go below ${committed}.`
+
+  function openAdjustment() {
+    render(
+      <MemoryRouter initialEntries={['/inventory']}>
+        <App />
+      </MemoryRouter>,
+    )
+    return openStockForm(target.name, 'Adjust stock')
+  }
+
+  const countField = (form) => within(form).getByLabelText(/new on-hand count/i)
+  const submit = (form) => fireEvent.click(within(form).getByRole('button', { name: 'Record adjustment' }))
+
+  it('shows the provider’s message on the count field when the reduction is refused, and keeps the form open', () => {
+    const form = openAdjustment()
+    setValue(countField(form), String(committed - 1))
+    submit(form)
+
+    const dialog = screen.getByRole('dialog', { name: `Update stock: ${target.name}` })
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(message)
+    expect(countField(dialog)).toHaveAttribute('aria-invalid', 'true')
+    expect(countField(dialog)).toHaveValue(committed - 1) // the value stays put so it can be corrected
+    expect(within(dialog).getByRole('button', { name: 'Record adjustment' })).toBeInTheDocument()
+  })
+
+  it('changes nothing when refused: the on-hand count is as before', () => {
+    const form = openAdjustment()
+    setValue(countField(form), '0')
+    submit(form)
+
+    const dialog = screen.getByRole('dialog', { name: `Update stock: ${target.name}` })
+    expect(dialog).toHaveTextContent(`Currently ${target.stock} units on hand`)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    const details = screen.getByRole('dialog', { name: target.name })
+    expect(within(tile(details, 'On hand')).getByText(`${target.stock} units`)).toBeInTheDocument()
+  })
+
+  it('clears the message as soon as the count is edited, and accepts a reduction down to the committed units', () => {
+    const form = openAdjustment()
+    setValue(countField(form), String(committed - 1))
+    submit(form)
+    expect(within(form).getByRole('alert')).toHaveTextContent(message)
+
+    setValue(countField(form), String(committed))
+    expect(within(form).queryByText(message)).not.toBeInTheDocument()
+    submit(form)
+
+    expect(screen.getByText(`Adjusted “${target.name}”: on hand ${target.stock} → ${committed}.`)).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: target.name })).toBeInTheDocument()
+  })
+
+  it('keeps the existing local messages: an unreadable count shows its own message, not the provider’s', () => {
+    const form = openAdjustment()
+    setValue(countField(form), String(committed - 1))
+    submit(form)
+    expect(within(form).getByText(message)).toBeInTheDocument()
+
+    setValue(countField(form), '')
+    submit(form)
+
+    expect(within(form).getByText('Enter the new on-hand count.')).toBeInTheDocument()
+    expect(within(form).queryByText(message)).not.toBeInTheDocument()
+  })
+
+  it('does not get in the way of raising stock', () => {
+    const form = openAdjustment()
+    setValue(countField(form), String(target.stock + 5))
+    submit(form)
+    expect(screen.getByText(`Adjusted “${target.name}”: on hand ${target.stock} → ${target.stock + 5}.`)).toBeInTheDocument()
   })
 })

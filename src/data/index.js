@@ -5,6 +5,13 @@ export { RESTOCK_EVENTS } from './inventoryEvents.js'
 export { MOVEMENT_REASONS, SEED_INVENTORY_MOVEMENTS, seedInventoryMovements } from './inventoryMovements.js'
 export { ADJUSTMENT_REASONS, validateAdjustment, validateRestock } from './inventoryRules.js'
 export {
+  getAvailableUnits,
+  getCommittedUnits,
+  getStockReductionError,
+  isOpenOrder,
+  validateOrderRequest,
+} from './availability.js'
+export {
   getInventoryStats,
   getInventoryStatus,
   getProductMovements,
