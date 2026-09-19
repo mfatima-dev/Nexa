@@ -231,25 +231,36 @@ function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1)
 }
 
+// Buckets are keyed by the local calendar date, so an order always lands on the day the user
+// experienced it in, whatever the timezone. (Keying by toISOString() gives the UTC date, which is
+// a different day for part of every day outside UTC.)
+function localDayKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function bucketedSeries(orders, buckets, keyFor) {
+  orders.forEach((order) => {
+    const bucket = buckets.get(keyFor(new Date(order.placedAt)))
+    if (bucket) bucket.value += order.total
+  })
+
+  return Array.from(buckets.values()).map(({ date, value }) => ({
+    label: formatDate(date, { month: 'short', day: 'numeric' }),
+    value: Math.round(value),
+  }))
+}
+
 function buildDailySeries(orders, start, end) {
   const buckets = new Map()
   const cursor = startOfDay(start)
   const last = startOfDay(end)
 
   while (cursor <= last) {
-    buckets.set(cursor.toISOString().slice(0, 10), 0)
+    buckets.set(localDayKey(cursor), { date: new Date(cursor), value: 0 })
     cursor.setDate(cursor.getDate() + 1)
   }
 
-  orders.forEach((order) => {
-    const key = order.placedAt.slice(0, 10)
-    if (buckets.has(key)) buckets.set(key, buckets.get(key) + order.total)
-  })
-
-  return Array.from(buckets.entries()).map(([key, value]) => ({
-    label: formatDate(key, { month: 'short', day: 'numeric' }),
-    value: Math.round(value),
-  }))
+  return bucketedSeries(orders, buckets, localDayKey)
 }
 
 function buildWeeklySeries(orders, start, end) {
@@ -258,19 +269,11 @@ function buildWeeklySeries(orders, start, end) {
   const last = startOfWeek(end)
 
   while (cursor <= last) {
-    buckets.set(cursor.toISOString().slice(0, 10), 0)
+    buckets.set(localDayKey(cursor), { date: new Date(cursor), value: 0 })
     cursor.setDate(cursor.getDate() + 7)
   }
 
-  orders.forEach((order) => {
-    const key = startOfWeek(new Date(order.placedAt)).toISOString().slice(0, 10)
-    if (buckets.has(key)) buckets.set(key, buckets.get(key) + order.total)
-  })
-
-  return Array.from(buckets.entries()).map(([key, value]) => ({
-    label: formatDate(key, { month: 'short', day: 'numeric' }),
-    value: Math.round(value),
-  }))
+  return bucketedSeries(orders, buckets, (date) => localDayKey(startOfWeek(date)))
 }
 
 function buildMonthlySeries(orders, start, end) {
@@ -306,7 +309,9 @@ export function buildRevenueSeries(orders, rangeKey, now = new Date()) {
   const earliestOrderDate = getEarliestOrderDate(orders)
   // Never render empty buckets for a time before the business had any orders.
   const start = naiveStart > earliestOrderDate ? naiveStart : earliestOrderDate
-  const windowOrders = getOrdersInWindow(orders, start, now).filter((order) => order.status !== 'Cancelled')
+  // Which orders count is decided by the real window, not the trimmed start: the window excludes
+  // its own start instant, so filtering with the trimmed start would drop the earliest order.
+  const windowOrders = getOrdersInWindow(orders, naiveStart, now).filter((order) => order.status !== 'Cancelled')
 
   if (rangeKey === '12m') return buildMonthlySeries(windowOrders, start, now)
   if (rangeKey === '90d') return buildWeeklySeries(windowOrders, start, now)

@@ -1,5 +1,5 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { formatCurrency } from '../../utils/format.js'
+import { formatCompactCurrency, formatCurrency } from '../../utils/format.js'
 import './RevenueChart.css'
 
 function CustomTooltip({ active, payload, label }) {
@@ -14,10 +14,6 @@ function CustomTooltip({ active, payload, label }) {
       </p>
     </div>
   )
-}
-
-function formatAxisValue(value) {
-  return value >= 1000 ? `$${Math.round(value / 1000)}k` : `$${value}`
 }
 
 function RevenueChart({ data }) {
@@ -46,7 +42,7 @@ function RevenueChart({ data }) {
             tickLine={false}
             axisLine={false}
             width={56}
-            tickFormatter={formatAxisValue}
+            tickFormatter={formatCompactCurrency}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--color-border-strong)', strokeWidth: 1 }} />
           <Area
