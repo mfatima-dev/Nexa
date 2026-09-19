@@ -6,6 +6,7 @@ import { useProducts } from '../../context/useProducts.js'
 import Button from '../../components/common/Button.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import MetricCard from '../../components/common/MetricCard.jsx'
+import Notice from '../../components/common/Notice.jsx'
 import PageHeader from '../../components/common/PageHeader.jsx'
 import Pagination from '../../components/common/Pagination.jsx'
 import SectionCard from '../../components/common/SectionCard.jsx'
@@ -127,11 +128,7 @@ function Products() {
         }
       />
 
-      {notice && (
-        <p className="products-page__notice" role="status">
-          {notice}
-        </p>
-      )}
+      {notice && <Notice>{notice}</Notice>}
 
       <div className="products-page__metrics">
         <MetricCard

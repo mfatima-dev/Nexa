@@ -24,7 +24,7 @@ import './Overview.css'
 
 function Overview() {
   const { orders } = useOrders()
-  const { products } = useProducts()
+  const { products, movements } = useProducts()
   const [range, setRange] = useState('30d')
 
   const metrics = useMemo(() => computeOverviewMetrics(orders, range), [orders, range])
@@ -32,7 +32,7 @@ function Overview() {
   const catalogSummary = useMemo(() => getProductCatalogSummary(products), [products])
   const topProducts = useMemo(() => getTopProducts(orders, products, 5), [orders, products])
   const recentOrders = useMemo(() => getRecentOrders(orders, 6), [orders])
-  const recentActivity = useMemo(() => getRecentActivity(orders, products, 8), [orders, products])
+  const recentActivity = useMemo(() => getRecentActivity(orders, products, movements, 8), [orders, products, movements])
 
   return (
     <div className="overview">

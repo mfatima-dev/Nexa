@@ -1,5 +1,4 @@
 import { CUSTOMERS } from './customers.js'
-import { RESTOCK_EVENTS } from './inventoryEvents.js'
 import { RANGE_OPTIONS } from './ranges.js'
 import { getMargin, getStockLevel } from './productRules.js'
 import { daysAgo, formatDate } from '../utils/date.js'
@@ -345,7 +344,7 @@ export function getRecentOrders(orders, limit = 6) {
 }
 
 /** Recent activity feed: order lifecycle events plus inventory restocks, newest first. */
-export function getRecentActivity(orders, products, limit = 8) {
+export function getRecentActivity(orders, products, movements, limit = 8) {
   const events = []
   const productsById = new Map(products.map((product) => [product.id, product]))
 
@@ -396,14 +395,16 @@ export function getRecentActivity(orders, products, limit = 8) {
     }
   })
 
-  RESTOCK_EVENTS.forEach((event) => {
-    const product = productsById.get(event.productId)
+  // Restocks come from the live inventory ledger, so ones recorded on the Inventory page show up too.
+  movements.forEach((movement) => {
+    if (movement.reason !== 'restock') return
+    const product = productsById.get(movement.productId)
     if (!product) return // the product was deleted from the catalog
     events.push({
-      id: event.id,
+      id: movement.id,
       type: 'inventory_restocked',
-      message: `${product.name} restocked (+${event.quantity} units)`,
-      occurredAt: event.occurredAt,
+      message: `${product.name} restocked (+${movement.change} units)`,
+      occurredAt: movement.occurredAt,
     })
   })
 

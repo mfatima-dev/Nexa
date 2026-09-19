@@ -40,6 +40,11 @@
   color: var(--color-warning);
 }
 
+.activity-feed__icon--inventory_adjusted {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
 .activity-feed__icon--order_cancelled {
   background: var(--color-danger-subtle);
   color: var(--color-danger);

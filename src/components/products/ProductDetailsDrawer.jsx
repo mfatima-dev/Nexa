@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Pencil, Trash2 } from 'lucide-react'
 import Button from '../common/Button.jsx'
 import Drawer from '../common/Drawer.jsx'
@@ -99,6 +100,9 @@ function ProductDetailsDrawer({ entry, onClose, onEdit, onDelete }) {
           <StatusBadge status={entry.stockLevel} />
           {stockAlert && <span>Consider restocking soon.</span>}
           {product.status === 'discontinued' && <span>Discontinued products aren’t flagged for restock.</span>}
+        </p>
+        <p className="product-drawer__muted">
+          <Link to={`/inventory?product=${product.id}`}>Manage stock in Inventory</Link>
         </p>
       </section>
 

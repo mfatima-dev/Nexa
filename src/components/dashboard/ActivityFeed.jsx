@@ -1,4 +1,4 @@
-import { Bell, PackageCheck, PackagePlus, RefreshCw, ShoppingCart, Truck, XCircle } from 'lucide-react'
+import { ArrowUpDown, Bell, PackageCheck, PackageMinus, PackagePlus, RefreshCw, ShoppingCart, Truck, XCircle } from 'lucide-react'
 import { formatRelativeTime } from '../../utils/date.js'
 import './ActivityFeed.css'
 
@@ -9,6 +9,8 @@ const ICONS = {
   order_delivered: PackageCheck,
   order_cancelled: XCircle,
   inventory_restocked: PackagePlus,
+  inventory_adjusted: ArrowUpDown,
+  inventory_fulfilled: PackageMinus,
 }
 
 function ActivityFeed({ items }) {

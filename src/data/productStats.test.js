@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PRODUCTS } from './products.js'
+import { SEED_INVENTORY_MOVEMENTS } from './inventoryMovements.js'
 import { ORDERS } from './orders.js'
 import {
   getProductCatalogSummary,
@@ -92,11 +93,23 @@ describe('getTopProducts / getRecentActivity follow the live catalog', () => {
   })
 
   it('uses the current product name in restock events, and skips deleted products', () => {
-    const restocked = getRecentActivity([], PRODUCTS.map((p) => (p.id === 'p01' ? { ...p, name: 'Renamed Pack' } : p)), 20)
+    const renamed = PRODUCTS.map((p) => (p.id === 'p01' ? { ...p, name: 'Renamed Pack' } : p))
+    const restocked = getRecentActivity([], renamed, SEED_INVENTORY_MOVEMENTS, 20)
     expect(restocked.some((e) => e.message.startsWith('Renamed Pack restocked'))).toBe(true)
 
-    const withoutP01 = getRecentActivity([], PRODUCTS.filter((p) => p.id !== 'p01'), 20)
+    const withoutP01 = getRecentActivity([], PRODUCTS.filter((p) => p.id !== 'p01'), SEED_INVENTORY_MOVEMENTS, 20)
     expect(withoutP01.some((e) => e.message.includes('Urban Backpack'))).toBe(false)
+  })
+
+  it('reports restocks recorded in the live ledger, but not other kinds of stock movement', () => {
+    const ledger = [
+      { id: 'a', productId: 'p01', reason: 'restock', change: 12, occurredAt: '2026-06-01T00:00:00.000Z' },
+      { id: 'b', productId: 'p01', reason: 'adjustment', change: -3, occurredAt: '2026-06-02T00:00:00.000Z' },
+      { id: 'c', productId: 'p01', reason: 'fulfillment', change: -2, occurredAt: '2026-06-03T00:00:00.000Z' },
+    ]
+    const feed = getRecentActivity([], PRODUCTS, ledger, 20)
+    expect(feed.map((e) => e.id)).toEqual(['a'])
+    expect(feed[0].message).toBe('Urban Backpack restocked (+12 units)')
   })
 })
 

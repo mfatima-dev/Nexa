@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { PRODUCTS } from '../data/products.js'
+import { SEED_INVENTORY_MOVEMENTS } from '../data/inventoryMovements.js'
+import { validateAdjustment, validateRestock } from '../data/inventoryRules.js'
 import {
   generateProductId,
   highestProductNumber,
@@ -9,19 +11,44 @@ import {
 import { ProductsContext } from './productsContextInstance.js'
 
 /**
- * Single source of truth for the product catalog. Actions re-validate, so invalid data can
- * never enter shared state. They return { ok, errors?, product? } for the calling form.
- * `initialProducts` exists so tests can start from a known catalog.
+ * Single source of truth for the catalog AND its stock. `product.stock` is the on-hand count;
+ * `movements` is the ledger explaining it. Every way stock can change goes through this provider
+ * and appends a movement, so the ledger always reconciles with the on-hand numbers:
+ *   addProduct (opening stock) / updateProduct (stock edited) / restockProduct / adjustProductStock
+ *   / fulfillOrder (an order shipped).
+ * Actions re-validate, so invalid data can never enter shared state, and return
+ * { ok, errors?, product?, movement? } for the calling form.
+ * `initialProducts` / `initialMovements` exist so tests can start from a known state.
  */
-export function ProductsProvider({ children, initialProducts = PRODUCTS }) {
+export function ProductsProvider({
+  children,
+  initialProducts = PRODUCTS,
+  initialMovements = SEED_INVENTORY_MOVEMENTS,
+}) {
   const [products, setProducts] = useState(initialProducts)
+  const [movements, setMovements] = useState(initialMovements)
   const productsRef = useRef(products)
+  const movementsRef = useRef(movements)
   // Never decreases, so deleting a product can't free its id for reuse (orders still reference it).
   const highestIdRef = useRef(highestProductNumber(initialProducts))
+  const movementCounterRef = useRef(0)
 
-  const commit = useCallback((next) => {
-    productsRef.current = next
-    setProducts(next)
+  const commit = useCallback((nextProducts, nextMovements = movementsRef.current) => {
+    productsRef.current = nextProducts
+    movementsRef.current = nextMovements
+    setProducts(nextProducts)
+    setMovements(nextMovements)
+  }, [])
+
+  const newMovement = useCallback((fields) => {
+    movementCounterRef.current += 1
+    return {
+      id: `mv-s${movementCounterRef.current}`,
+      note: '',
+      orderId: null,
+      occurredAt: new Date().toISOString(),
+      ...fields,
+    }
   }, [])
 
   const addProduct = useCallback(
@@ -32,10 +59,13 @@ export function ProductsProvider({ children, initialProducts = PRODUCTS }) {
       const id = generateProductId(productsRef.current, highestIdRef.current)
       highestIdRef.current = Number(id.slice(1))
       const product = { ...normalizeProductValues(values), id, createdAt: new Date().toISOString() }
-      commit([...productsRef.current, product])
+      const opening = product.stock > 0
+        ? [newMovement({ productId: id, reason: 'adjustment', change: product.stock, detail: 'Opening stock' })]
+        : []
+      commit([...productsRef.current, product], [...movementsRef.current, ...opening])
       return { ok: true, product }
     },
-    [commit],
+    [commit, newMovement],
   )
 
   const updateProduct = useCallback(
@@ -47,10 +77,19 @@ export function ProductsProvider({ children, initialProducts = PRODUCTS }) {
       if (Object.keys(errors).length > 0) return { ok: false, errors }
 
       const product = { ...existing, ...normalizeProductValues(values) }
-      commit(productsRef.current.map((item) => (item.id === productId ? product : item)))
+      // Editing the stock field is a stock change like any other, so it goes in the ledger.
+      const change = product.stock - existing.stock
+      const logged =
+        change !== 0
+          ? [newMovement({ productId, reason: 'adjustment', change, detail: 'Edited on Products page' })]
+          : []
+      commit(
+        productsRef.current.map((item) => (item.id === productId ? product : item)),
+        [...movementsRef.current, ...logged],
+      )
       return { ok: true, product }
     },
-    [commit],
+    [commit, newMovement],
   )
 
   const deleteProduct = useCallback(
@@ -62,9 +101,107 @@ export function ProductsProvider({ children, initialProducts = PRODUCTS }) {
     [commit],
   )
 
+  const restockProduct = useCallback(
+    (productId, values) => {
+      const existing = productsRef.current.find((product) => product.id === productId)
+      if (!existing) return { ok: false, errors: {} }
+
+      const errors = validateRestock(values, existing.stock)
+      if (Object.keys(errors).length > 0) return { ok: false, errors }
+
+      const quantity = Number(values.quantity)
+      const movement = newMovement({
+        productId,
+        reason: 'restock',
+        change: quantity,
+        detail: 'Stock received',
+        note: String(values.note ?? '').trim(),
+      })
+      const product = { ...existing, stock: existing.stock + quantity }
+      commit(
+        productsRef.current.map((item) => (item.id === productId ? product : item)),
+        [...movementsRef.current, movement],
+      )
+      return { ok: true, product, movement }
+    },
+    [commit, newMovement],
+  )
+
+  const adjustProductStock = useCallback(
+    (productId, values) => {
+      const existing = productsRef.current.find((product) => product.id === productId)
+      if (!existing) return { ok: false, errors: {} }
+
+      const errors = validateAdjustment(values, existing.stock)
+      if (Object.keys(errors).length > 0) return { ok: false, errors }
+
+      const newQuantity = Number(values.newQuantity)
+      const movement = newMovement({
+        productId,
+        reason: 'adjustment',
+        change: newQuantity - existing.stock,
+        detail: values.reason,
+        note: String(values.note ?? '').trim(),
+      })
+      const product = { ...existing, stock: newQuantity }
+      commit(
+        productsRef.current.map((item) => (item.id === productId ? product : item)),
+        [...movementsRef.current, movement],
+      )
+      return { ok: true, product, movement }
+    },
+    [commit, newMovement],
+  )
+
+  /**
+   * Called when an order ships: deducts each line from stock and records it. Stock never goes
+   * below zero; if a line can't be fully covered, only what's on hand is deducted and the
+   * shortfall is noted on the movement, so the ledger still reconciles. Lines for products
+   * that no longer exist are skipped.
+   */
+  const fulfillOrder = useCallback(
+    (order) => {
+      let nextProducts = productsRef.current
+      const added = []
+
+      order.items.forEach((item) => {
+        const product = nextProducts.find((candidate) => candidate.id === item.productId)
+        if (!product) return
+
+        const applied = Math.min(item.quantity, Math.max(product.stock, 0))
+        const shortfall = item.quantity - applied
+        nextProducts = nextProducts.map((candidate) =>
+          candidate.id === product.id ? { ...candidate, stock: candidate.stock - applied } : candidate,
+        )
+        added.push(
+          newMovement({
+            productId: product.id,
+            reason: 'fulfillment',
+            change: -applied,
+            detail: 'Order shipped',
+            orderId: order.id,
+            note: shortfall > 0 ? `Short by ${shortfall} ${shortfall === 1 ? 'unit' : 'units'}` : '',
+          }),
+        )
+      })
+
+      if (added.length > 0) commit(nextProducts, [...movementsRef.current, ...added])
+    },
+    [commit, newMovement],
+  )
+
   const value = useMemo(
-    () => ({ products, addProduct, updateProduct, deleteProduct }),
-    [products, addProduct, updateProduct, deleteProduct],
+    () => ({
+      products,
+      movements,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+      restockProduct,
+      adjustProductStock,
+      fulfillOrder,
+    }),
+    [products, movements, addProduct, updateProduct, deleteProduct, restockProduct, adjustProductStock, fulfillOrder],
   )
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>

@@ -1,0 +1,95 @@
+.movement-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.movement-history__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.movement-history__item + .movement-history__item {
+  border-top: 1px solid var(--color-border);
+}
+
+.movement-history__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.movement-history__reason {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.movement-history__detail {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.movement-history__detail a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.movement-history__detail a:hover {
+  text-decoration: underline;
+}
+
+.movement-history__date {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.movement-history__numbers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.movement-history__change {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.movement-history__change--up {
+  color: var(--color-success);
+}
+
+.movement-history__balance {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.movement-history__toggle {
+  margin-top: var(--space-3);
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.movement-history__toggle:hover {
+  text-decoration: underline;
+}
+
+.movement-history__empty {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

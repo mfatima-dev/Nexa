@@ -40,3 +40,12 @@
   gap: var(--space-3);
   justify-content: flex-end;
 }
+
+.product-drawer__muted a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.product-drawer__muted a:hover {
+  text-decoration: underline;
+}

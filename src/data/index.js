@@ -2,6 +2,15 @@ export { PRODUCTS, PRODUCT_CATEGORIES } from './products.js'
 export { CUSTOMERS } from './customers.js'
 export { ORDERS } from './orders.js'
 export { RESTOCK_EVENTS } from './inventoryEvents.js'
+export { MOVEMENT_REASONS, SEED_INVENTORY_MOVEMENTS, seedInventoryMovements } from './inventoryMovements.js'
+export { ADJUSTMENT_REASONS, validateAdjustment, validateRestock } from './inventoryRules.js'
+export {
+  getInventoryStats,
+  getInventoryStatus,
+  getProductMovements,
+  getRecentInventoryActivity,
+  movementLabel,
+} from './inventorySelectors.js'
 export { RANGE_OPTIONS } from './ranges.js'
 export {
   PRODUCT_STATUSES,

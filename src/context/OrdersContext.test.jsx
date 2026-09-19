@@ -76,3 +76,46 @@ describe('OrdersProvider + useOrders', () => {
     expect(otherAfter).toEqual(otherBefore)
   })
 })
+
+describe('OrdersProvider onOrderShipped', () => {
+  function setupWithCallback(onOrderShipped) {
+    return renderHook(() => useOrders(), {
+      wrapper: ({ children }) => <OrdersProvider onOrderShipped={onOrderShipped}>{children}</OrdersProvider>,
+    })
+  }
+
+  it('is called once, with the updated order, when an order moves to Shipped', () => {
+    const calls = []
+    const { result } = setupWithCallback((order) => calls.push(order))
+    const target = result.current.orders.find((o) => o.status === 'Processing')
+
+    act(() => result.current.updateOrderStatus(target.id, 'Shipped'))
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({ id: target.id, status: 'Shipped' })
+    expect(calls[0].shippedAt).not.toBeNull()
+    // The order in shared state is the same one the callback received.
+    expect(result.current.orders.find((o) => o.id === target.id)).toEqual(calls[0])
+  })
+
+  it('is not called for any other transition, or for an invalid one', () => {
+    const calls = []
+    const { result } = setupWithCallback((order) => calls.push(order))
+    const pending = result.current.orders.find((o) => o.status === 'Pending')
+    const delivered = result.current.orders.find((o) => o.status === 'Delivered')
+
+    act(() => result.current.updateOrderStatus(pending.id, 'Processing'))
+    act(() => result.current.updateOrderStatus(pending.id, 'Cancelled'))
+    act(() => result.current.updateOrderStatus(delivered.id, 'Shipped')) // backwards: rejected
+    act(() => result.current.updateOrderStatus('NX-99999', 'Shipped')) // unknown
+
+    expect(calls).toHaveLength(0)
+  })
+
+  it('works without a callback', () => {
+    const { result } = setupWithCallback(undefined)
+    const target = result.current.orders.find((o) => o.status === 'Processing')
+    act(() => result.current.updateOrderStatus(target.id, 'Shipped'))
+    expect(result.current.orders.find((o) => o.id === target.id).status).toBe('Shipped')
+  })
+})

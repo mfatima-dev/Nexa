@@ -1,0 +1,23 @@
+/* Drawer shell lives in common/Drawer.css; tiles in common/StatGrid.css. */
+
+.inventory-drawer__sku {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.inventory-drawer__muted {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.inventory-drawer__muted a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.inventory-drawer__muted a:hover {
+  text-decoration: underline;
+}
