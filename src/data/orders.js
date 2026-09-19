@@ -52,11 +52,35 @@ function buildOrderItems() {
   return items
 }
 
+// One reference time for the whole dataset, so no order can be stamped after the moment it was generated.
+const SEED_TIME = new Date()
+const FIRST_ORDER_HOUR = 8
+const LAST_ORDER_HOUR = 20
+const ORDER_WINDOW_MINUTES = (LAST_ORDER_HOUR - FIRST_ORDER_HOUR + 1) * 60
+
+// Orders are placed during the day, 08:00-20:59. For today that hour may not have happened yet, so a
+// time later than now is scaled proportionally into today's window [08:00, now] (or [00:00, now] before
+// 08:00), keeping the order in the dataset. Times that are already in the past are left as drawn.
+function pickPlacedAt(dayOffset) {
+  const placed = new Date(SEED_TIME)
+  placed.setDate(placed.getDate() - dayOffset)
+  const hour = randomInt(FIRST_ORDER_HOUR, LAST_ORDER_HOUR)
+  const minute = randomInt(0, 59)
+  placed.setHours(hour, minute, 0, 0)
+  if (placed <= SEED_TIME) return placed
+
+  const windowStart = new Date(SEED_TIME)
+  windowStart.setHours(FIRST_ORDER_HOUR, 0, 0, 0)
+  if (windowStart >= SEED_TIME) windowStart.setHours(0, 0, 0, 0)
+  const position = ((hour - FIRST_ORDER_HOUR) * 60 + minute) / ORDER_WINDOW_MINUTES
+  const capped = new Date(windowStart.getTime() + position * (SEED_TIME - windowStart))
+  capped.setSeconds(0, 0)
+  return capped
+}
+
 function buildRawOrder() {
   const dayOffset = pickDayOffset()
-  const placed = new Date()
-  placed.setDate(placed.getDate() - dayOffset)
-  placed.setHours(randomInt(8, 20), randomInt(0, 59), 0, 0)
+  const placed = pickPlacedAt(dayOffset)
 
   const status = pickStatus(dayOffset)
   const items = buildOrderItems()
@@ -66,6 +90,7 @@ function buildRawOrder() {
   let shippedAt = null
   let deliveredAt = null
 
+  // Shipping and delivery are always 1+ days after placement, so they can never precede placedAt.
   if (status === 'Shipped' || status === 'Delivered') {
     const shipped = new Date(placed)
     shipped.setDate(shipped.getDate() + randomInt(1, 2))
