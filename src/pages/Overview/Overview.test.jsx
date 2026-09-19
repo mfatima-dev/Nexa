@@ -129,6 +129,34 @@ describe('Overview Top Products follows the selected range', () => {
   })
 })
 
+describe('Overview Recent Orders on the page', () => {
+  beforeEach(() => {
+    shared.orders = ORDERS
+  })
+
+  it('offers every recent order as a table row and as a mobile card carrying the same fields', () => {
+    renderOverview()
+    const panel = within(screen.getByRole('heading', { name: 'Recent Orders' }).closest('section'))
+    const cards = document.querySelectorAll('.recent-orders__cards > li')
+
+    expect(panel.getByRole('table')).toBeInTheDocument()
+    expect(cards).toHaveLength(ORDERS.length)
+
+    const newest = cards[0]
+    expect(within(newest).getByText('NX-6')).toBeInTheDocument()
+    expect(within(newest).getByText('$50.00')).toBeInTheDocument()
+    expect(within(newest).getByText('Processing')).toHaveClass('status-badge')
+    expect(newest.querySelector('a')).toHaveAttribute('href', '/orders')
+  })
+
+  it('keeps the empty state', () => {
+    shared.orders = []
+    renderOverview()
+    expect(screen.getByText('No orders yet.')).toBeInTheDocument()
+    expect(document.querySelector('.recent-orders__cards')).toBeNull()
+  })
+})
+
 describe('Overview Top Products with nothing sold in the range', () => {
   it('keeps the empty state when the only sales are outside the selected window', () => {
     shared.orders = [ORDERS[0]]
