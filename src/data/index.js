@@ -13,6 +13,16 @@ export {
 } from './inventorySelectors.js'
 export { RANGE_OPTIONS } from './ranges.js'
 export {
+  REMOVED_PRODUCTS_LABEL,
+  buildAnalyticsSeries,
+  getAnalyticsInsights,
+  getAnalyticsMetrics,
+  getAnalyticsReport,
+  getAnalyticsWindow,
+  getCategoryPerformance,
+  getTopProductsInRange,
+} from './analyticsSelectors.js'
+export {
   PRODUCT_STATUSES,
   STATUS_LABELS,
   STOCK_LEVELS,

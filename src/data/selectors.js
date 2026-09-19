@@ -9,16 +9,16 @@ export function getCustomerById(customerId) {
   return customersById.get(customerId) ?? null
 }
 
-function getRangeConfig(rangeKey) {
+export function getRangeConfig(rangeKey) {
   return RANGE_OPTIONS.find((option) => option.key === rangeKey) ?? RANGE_OPTIONS[1]
 }
 
-function withinWindow(dateStr, start, end) {
+export function withinWindow(dateStr, start, end) {
   const time = new Date(dateStr).getTime()
   return time > start.getTime() && time <= end.getTime()
 }
 
-function getOrdersInWindow(orders, start, end) {
+export function getOrdersInWindow(orders, start, end) {
   return orders.filter((order) => withinWindow(order.placedAt, start, end))
 }
 

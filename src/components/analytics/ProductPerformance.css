@@ -1,0 +1,113 @@
+.product-performance {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.product-performance__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.product-performance__rank {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.product-performance__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-performance__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.product-performance__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.product-performance__name:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.product-performance__revenue {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.product-performance__meta {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.product-performance__bar-track {
+  margin-top: var(--space-2);
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  overflow: hidden;
+}
+
+.product-performance__bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: var(--radius-sm);
+}
+
+.product-performance__stock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.product-performance__on-hand {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.product-performance__action {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.product-performance__action:hover {
+  text-decoration: underline;
+}
+
+.product-performance__empty {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
