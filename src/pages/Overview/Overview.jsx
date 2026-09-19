@@ -30,7 +30,7 @@ function Overview() {
   const metrics = useMemo(() => computeOverviewMetrics(orders, range), [orders, range])
   const revenueSeries = useMemo(() => buildRevenueSeries(orders, range), [orders, range])
   const catalogSummary = useMemo(() => getProductCatalogSummary(products), [products])
-  const topProducts = useMemo(() => getTopProducts(orders, products, 5), [orders, products])
+  const topProducts = useMemo(() => getTopProducts(orders, products, 5, range), [orders, products, range])
   const recentOrders = useMemo(() => getRecentOrders(orders, 6), [orders])
   const recentActivity = useMemo(() => getRecentActivity(orders, products, movements, 8), [orders, products, movements])
 
@@ -81,7 +81,7 @@ function Overview() {
       </SectionCard>
 
       <div className="overview__secondary-row">
-        <SectionCard title="Top Products" subtitle="Best performers by revenue">
+        <SectionCard title="Top Products" subtitle="Best performers by revenue for the selected period">
           <TopProductsList items={topProducts} />
         </SectionCard>
         <SectionCard title="Recent Orders" subtitle="Latest orders across all customers">

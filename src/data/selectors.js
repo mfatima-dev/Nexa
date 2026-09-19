@@ -318,11 +318,16 @@ export function buildRevenueSeries(orders, rangeKey, now = new Date()) {
   return buildDailySeries(windowOrders, start, now)
 }
 
-/** Best-selling products by revenue. Products deleted from the catalog no longer appear. */
-export function getTopProducts(orders, products, limit = 5) {
+/**
+ * Best-selling products by revenue. Products deleted from the catalog no longer appear.
+ * With a rangeKey, only orders in that Overview window count (the same window as the Overview
+ * metrics and revenue chart); without one, every order counts.
+ */
+export function getTopProducts(orders, products, limit = 5, rangeKey = null, now = new Date()) {
   const productsById = new Map(products.map((product) => [product.id, product]))
+  const rankedOrders = rangeKey ? getOrdersInWindow(orders, daysAgo(getRangeConfig(rangeKey).days, now), now) : orders
 
-  const ranked = Array.from(getProductSales(orders).entries())
+  const ranked = Array.from(getProductSales(rankedOrders).entries())
     .map(([productId, stats]) => ({
       product: productsById.get(productId),
       unitsSold: stats.unitsSold,

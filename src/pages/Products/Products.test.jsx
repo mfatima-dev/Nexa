@@ -442,7 +442,8 @@ describe('Products page: deleting a product', () => {
 })
 
 describe('Products connected to the rest of Nexa', () => {
-  const top = getTopProducts(ORDERS, PRODUCTS, 5)[0]
+  // Overview opens on 30D, so its Top Products leader is the best seller of that window, not the all-time one.
+  const top = getTopProducts(ORDERS, PRODUCTS, 5, '30d')[0]
   const topName = top.product.name
   const orderWithTop = ORDERS.find((order) => order.items.some((item) => item.productId === top.product.id))
 
