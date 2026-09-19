@@ -1,0 +1,25 @@
+/*
+ * Appearance preferences, applied by SettingsProvider as data attributes on <html>.
+ * Nexa has a single (dark) theme, so there is no theme-specific styling here: only motion.
+ */
+
+/* Reduce motion: follow the operating system's setting, or the Nexa preference on the Settings page. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

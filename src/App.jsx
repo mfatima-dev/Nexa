@@ -1,6 +1,7 @@
 import AppRouter from './router/AppRouter.jsx'
 import { OrdersProvider } from './context/OrdersContext.jsx'
 import { ProductsProvider } from './context/ProductsContext.jsx'
+import { SettingsProvider } from './context/SettingsContext.jsx'
 import { useProducts } from './context/useProducts.js'
 
 // Shipping an order takes its units out of stock. The bridge lives here so that neither provider
@@ -12,11 +13,13 @@ function OrdersWithFulfillment({ children }) {
 
 function App() {
   return (
-    <ProductsProvider>
-      <OrdersWithFulfillment>
-        <AppRouter />
-      </OrdersWithFulfillment>
-    </ProductsProvider>
+    <SettingsProvider>
+      <ProductsProvider>
+        <OrdersWithFulfillment>
+          <AppRouter />
+        </OrdersWithFulfillment>
+      </ProductsProvider>
+    </SettingsProvider>
   )
 }
 

@@ -1,0 +1,14 @@
+.settings-section {
+  border-radius: var(--radius-lg);
+  /* Keep a jumped-to section clear of the sticky top bar. */
+  scroll-margin-top: calc(64px + var(--space-4));
+}
+
+.settings-section:focus {
+  outline: none;
+}
+
+.settings-section:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
