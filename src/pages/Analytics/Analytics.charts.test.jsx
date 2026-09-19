@@ -43,6 +43,14 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+// A weekly chart has one point per Monday-start calendar week that the window touches (the first and last
+// can be partial), so its length depends on the weekday: 13 when the window starts on a Monday, else 14.
+function weeksTouchedByWindow(days) {
+  const mondayOf = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7))
+  const windowStart = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - days)
+  return Math.round((mondayOf(NOW) - mondayOf(windowStart)) / (7 * 24 * 60 * 60 * 1000)) + 1
+}
+
 const sum = (list, pick) => list.reduce((total, item) => total + pick(item), 0)
 const expected = (range) => getAnalyticsReport(ORDERS, PRODUCTS, range, { customers: CUSTOMERS, now: NOW })
 
@@ -69,7 +77,7 @@ describe('the data handed to the charts', () => {
   it.each([
     ['7D', '7d', 8],
     ['30D', '30d', 31],
-    ['90D', '90d', 14],
+    ['90D', '90d', weeksTouchedByWindow(90)],
   ])('%s: the charts get one point per day/week, and their totals equal the headline metrics', (label, key, points) => {
     renderAnalytics()
     fireEvent.click(screen.getByRole('button', { name: label }))

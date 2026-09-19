@@ -3,17 +3,21 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import CustomerDetailsDrawer from './CustomerDetailsDrawer.jsx'
 
+// The drawer shows dates in the viewer's local time, so fixtures are local noon: the calendar date they
+// show is the same in every timezone (a fixed UTC noon crosses midnight at UTC+12 and beyond).
+const localNoon = (year, month, day) => new Date(year, month - 1, day, 12).toISOString()
+
 const customer = {
   id: 'c001',
   name: 'Sarah Bennett',
   email: 'sarah.bennett@gmail.com',
   city: 'Austin',
   state: 'TX',
-  joinedAt: '2026-03-05T12:00:00.000Z',
+  joinedAt: localNoon(2026, 3, 5),
 }
 
 function makeOrder(n, status = 'Delivered', total = 100) {
-  return { id: `NX-${1000 + n}`, customerId: 'c001', status, total, placedAt: `2026-06-${String(20 - n).padStart(2, '0')}T12:00:00.000Z` }
+  return { id: `NX-${1000 + n}`, customerId: 'c001', status, total, placedAt: localNoon(2026, 6, 20 - n) }
 }
 
 function renderDrawer(entry, orders) {
@@ -29,7 +33,7 @@ const entry = {
   orderCount: 3,
   totalSpent: 240,
   averageOrderValue: 120,
-  lastOrderAt: '2026-06-19T12:00:00.000Z',
+  lastOrderAt: localNoon(2026, 6, 19),
   status: 'Active',
 }
 
