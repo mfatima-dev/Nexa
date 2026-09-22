@@ -5,6 +5,7 @@ import { OrdersContext } from './ordersContextInstance.js'
 import { applyStatusChange, isValidTransition } from './orderStatus.js'
 
 const NO_PRODUCTS = () => []
+const NO_CUSTOMERS = () => []
 
 // Order ids look like NX-1149. Orders are never deleted, so one more than the highest is always unused.
 function nextOrderId(orders) {
@@ -19,21 +20,25 @@ function nextOrderId(orders) {
  * `onOrderShipped(order)` is called once, after state is updated, when an order moves to Shipped.
  * It is how order fulfillment reaches inventory without the two providers knowing about each other.
  *
- * `placeOrder({ customerId, items })` creates a Pending order. Placing an order reserves its units (the
- * commitment is derived from open orders, see data/availability.js) but never touches physical stock.
- * The request is validated against the freshest orders and products, `getProducts()` being injected the
- * same way as `onOrderShipped`, and it is all-or-nothing. Returns { ok, errors? , order? }.
+ * `placeOrder({ customerId, items })` creates a Pending order for a real customer. Placing an order
+ * reserves its units (the commitment is derived from open orders, see data/availability.js) but never
+ * touches physical stock. The request is validated against the freshest orders, products and
+ * customers, `getProducts()` / `getCustomers()` being injected the same way as `onOrderShipped`, and
+ * it is all-or-nothing: `customerId` must name a real customer (typically one just created by
+ * CustomersContext's `createCustomer`), or the order is refused. Returns { ok, errors?, order? }.
  * `getOrders()` reads the freshest orders for whoever needs them outside React state.
  */
-export function OrdersProvider({ children, onOrderShipped, getProducts = NO_PRODUCTS }) {
+export function OrdersProvider({ children, onOrderShipped, getProducts = NO_PRODUCTS, getCustomers = NO_CUSTOMERS }) {
   const [orders, setOrders] = useState(INITIAL_ORDERS)
   const ordersRef = useRef(orders)
   const onOrderShippedRef = useRef(onOrderShipped)
   const getProductsRef = useRef(getProducts)
+  const getCustomersRef = useRef(getCustomers)
 
   useEffect(() => {
     onOrderShippedRef.current = onOrderShipped
     getProductsRef.current = getProducts
+    getCustomersRef.current = getCustomers
   })
 
   const getOrders = useCallback(() => ordersRef.current, [])
@@ -53,8 +58,10 @@ export function OrdersProvider({ children, onOrderShipped, getProducts = NO_PROD
 
   const placeOrder = useCallback(({ customerId, items } = {}) => {
     const products = getProductsRef.current()
+    const customers = getCustomersRef.current()
     const errors = validateOrderRequest(items, products, ordersRef.current)
-    if (typeof customerId !== 'string' || !customerId.trim()) errors.customerId = 'Choose a customer.'
+    const customer = typeof customerId === 'string' ? customers.find((candidate) => candidate.id === customerId.trim()) : null
+    if (!customer) errors.customerId = 'Choose a customer.'
     if (Object.keys(errors).length > 0) return { ok: false, errors }
 
     // Name and unit price are snapshots, so the order stays readable and priced if the product changes.
@@ -64,7 +71,7 @@ export function OrdersProvider({ children, onOrderShipped, getProducts = NO_PROD
     })
     const order = {
       id: nextOrderId(ordersRef.current),
-      customerId: customerId.trim(),
+      customerId: customer.id,
       status: 'Pending',
       placedAt: new Date().toISOString(),
       shippedAt: null,

@@ -167,8 +167,10 @@ function roundCurrency(value) {
  *  - orderCount: every order the customer placed (matches the Orders page)
  *  - totalSpent / averageOrderValue: exclude cancelled orders (matches Overview revenue)
  *  - status: Active (ordered recently) | Inactive (ordered, but not recently) | No orders
+ * `customers` defaults to the seeded list; pass CustomersContext's live list to include customers
+ * created after the seed (e.g. from a Storefront checkout).
  */
-export function getCustomerStats(orders, now = new Date()) {
+export function getCustomerStats(orders, now = new Date(), customers = CUSTOMERS) {
   const ordersByCustomer = new Map()
   orders.forEach((order) => {
     const list = ordersByCustomer.get(order.customerId) ?? []
@@ -178,7 +180,7 @@ export function getCustomerStats(orders, now = new Date()) {
 
   const activeCutoff = daysAgo(ACTIVE_CUSTOMER_WINDOW_DAYS, now)
 
-  return CUSTOMERS.map((customer) => {
+  return customers.map((customer) => {
     const customerOrders = ordersByCustomer.get(customer.id) ?? []
     const paidOrders = customerOrders.filter((order) => order.status !== 'Cancelled')
     const totalSpent = roundCurrency(paidOrders.reduce((sum, order) => sum + order.total, 0))

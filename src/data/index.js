@@ -1,5 +1,11 @@
 export { PRODUCTS, PRODUCT_CATEGORIES } from './products.js'
 export { CUSTOMERS } from './customers.js'
+export {
+  findCustomerByEmail,
+  generateCustomerId,
+  normalizeCustomerValues,
+  validateCustomer,
+} from './customerRules.js'
 export { ORDERS } from './orders.js'
 export { RESTOCK_EVENTS } from './inventoryEvents.js'
 export { MOVEMENT_REASONS, SEED_INVENTORY_MOVEMENTS, seedInventoryMovements } from './inventoryMovements.js'

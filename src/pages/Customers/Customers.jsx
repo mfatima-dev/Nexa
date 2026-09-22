@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DollarSign, UserCheck, Users, Wallet } from 'lucide-react'
+import { useCustomers } from '../../context/useCustomers.js'
 import { useOrders } from '../../context/useOrders.js'
 import PageHeader from '../../components/common/PageHeader.jsx'
 import SectionCard from '../../components/common/SectionCard.jsx'
@@ -27,11 +28,13 @@ const PAGE_SIZE = 10
 
 function Customers() {
   const { orders } = useOrders()
+  const { customers } = useCustomers()
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [page, setPage] = useState(1)
   const [selectedCustomerId, setSelectedCustomerId] = useState(null)
 
-  const stats = useMemo(() => getCustomerStats(orders), [orders])
+  // A customer created since the seed (e.g. from a future Storefront checkout) shows up here too.
+  const stats = useMemo(() => getCustomerStats(orders, undefined, customers), [orders, customers])
   const summary = useMemo(() => getCustomerSummary(stats), [stats])
   const filteredCustomers = useMemo(() => filterAndSortCustomers(stats, filters), [stats, filters])
 

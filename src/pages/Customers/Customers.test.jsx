@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../../App.jsx'
+import { CustomersProvider } from '../../context/CustomersContext.jsx'
 import { OrdersProvider } from '../../context/OrdersContext.jsx'
 import { CUSTOMERS } from '../../data/customers.js'
 import { ORDERS } from '../../data/orders.js'
@@ -15,9 +16,11 @@ const summary = getCustomerSummary(stats)
 function renderCustomers() {
   return render(
     <MemoryRouter initialEntries={['/customers']}>
-      <OrdersProvider>
-        <Customers />
-      </OrdersProvider>
+      <CustomersProvider>
+        <OrdersProvider>
+          <Customers />
+        </OrdersProvider>
+      </CustomersProvider>
     </MemoryRouter>,
   )
 }
