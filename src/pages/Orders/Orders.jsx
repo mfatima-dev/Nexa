@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useCustomers } from '../../context/useCustomers.js'
 import { useOrders } from '../../context/useOrders.js'
 import PageHeader from '../../components/common/PageHeader.jsx'
 import SectionCard from '../../components/common/SectionCard.jsx'
@@ -17,6 +18,7 @@ const PAGE_SIZE = 10
 
 function Orders() {
   const { orders, updateOrderStatus } = useOrders()
+  const { customers } = useCustomers()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // `?q=` pre-fills the search box (e.g. "all orders for this customer" links);
@@ -26,7 +28,10 @@ function Orders() {
   const selectedOrderId = searchParams.get('order')
 
   const statusCounts = useMemo(() => getOrderStatusCounts(orders), [orders])
-  const filteredOrders = useMemo(() => filterAndSortOrders(orders, filters), [orders, filters])
+  const filteredOrders = useMemo(
+    () => filterAndSortOrders(orders, filters, new Date(), customers),
+    [orders, filters, customers],
+  )
 
   const {
     pageItems,

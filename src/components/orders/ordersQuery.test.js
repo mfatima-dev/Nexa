@@ -1,12 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { DEFAULT_FILTERS, filterAndSortOrders, hasActiveFilters, paginateOrders } from './ordersQuery.js'
 
-vi.mock('../../data/selectors.js', () => ({
-  getCustomerById: (id) => {
-    const names = { c001: 'Sarah Bennett', c002: 'James Carter' }
-    return names[id] ? { name: names[id] } : null
-  },
-}))
+const CUSTOMERS = [
+  { id: 'c001', name: 'Sarah Bennett' },
+  { id: 'c002', name: 'James Carter' },
+]
 
 const NOW = new Date('2026-06-15T12:00:00.000Z')
 
@@ -33,43 +31,43 @@ const ORDERS = [
 
 describe('filterAndSortOrders', () => {
   it('returns all orders newest-first by default', () => {
-    const result = filterAndSortOrders(ORDERS, DEFAULT_FILTERS, NOW)
+    const result = filterAndSortOrders(ORDERS, DEFAULT_FILTERS, NOW, CUSTOMERS)
     expect(result.map((o) => o.id)).toEqual(['NX-1000', 'NX-1003', 'NX-1001', 'NX-1002'])
   })
 
   it('searches by order id (case-insensitive)', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, search: 'nx-1002' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, search: 'nx-1002' }, NOW, CUSTOMERS)
     expect(result.map((o) => o.id)).toEqual(['NX-1002'])
   })
 
   it('searches by customer name', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, search: 'james' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, search: 'james' }, NOW, CUSTOMERS)
     expect(result.map((o) => o.id).sort()).toEqual(['NX-1001', 'NX-1003'])
   })
 
   it('filters by status', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, status: 'Cancelled' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, status: 'Cancelled' }, NOW, CUSTOMERS)
     expect(result.map((o) => o.id)).toEqual(['NX-1002'])
   })
 
   it('filters by date range (last 7 days)', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, dateRange: '7d' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, dateRange: '7d' }, NOW, CUSTOMERS)
     // NOW is 2026-06-15; cutoff is 2026-06-08, so only 2026-05-01 falls outside it
     expect(result.map((o) => o.id).sort()).toEqual(['NX-1000', 'NX-1001', 'NX-1003'])
   })
 
   it('sorts oldest first', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, sort: 'oldest' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, sort: 'oldest' }, NOW, CUSTOMERS)
     expect(result.map((o) => o.id)).toEqual(['NX-1002', 'NX-1001', 'NX-1003', 'NX-1000'])
   })
 
   it('sorts by highest amount', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, sort: 'amount_desc' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, sort: 'amount_desc' }, NOW, CUSTOMERS)
     expect(result.map((o) => o.id)).toEqual(['NX-1002', 'NX-1000', 'NX-1001', 'NX-1003'])
   })
 
   it('sorts by lowest amount', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, sort: 'amount_asc' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, sort: 'amount_asc' }, NOW, CUSTOMERS)
     expect(result.map((o) => o.id)).toEqual(['NX-1003', 'NX-1001', 'NX-1000', 'NX-1002'])
   })
 
@@ -78,12 +76,20 @@ describe('filterAndSortOrders', () => {
       ORDERS,
       { ...DEFAULT_FILTERS, status: 'Pending', search: 'james' },
       NOW,
+      CUSTOMERS,
     )
     expect(result.map((o) => o.id)).toEqual(['NX-1001'])
   })
 
+  it('searches customers that are not in any static list (e.g. created at Storefront checkout)', () => {
+    const orders = [...ORDERS, makeOrder({ id: 'NX-1004', customerId: 'c051', placedAt: '2026-06-15T00:00:00.000Z' })]
+    const customers = [...CUSTOMERS, { id: 'c051', name: 'Priya Nandakumar' }]
+    const result = filterAndSortOrders(orders, { ...DEFAULT_FILTERS, search: 'priya' }, NOW, customers)
+    expect(result.map((o) => o.id)).toEqual(['NX-1004'])
+  })
+
   it('returns an empty array when nothing matches', () => {
-    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, search: 'no such customer' }, NOW)
+    const result = filterAndSortOrders(ORDERS, { ...DEFAULT_FILTERS, search: 'no such customer' }, NOW, CUSTOMERS)
     expect(result).toEqual([])
   })
 })

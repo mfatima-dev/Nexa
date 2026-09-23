@@ -1,4 +1,3 @@
-import { getCustomerById } from '../../data/selectors.js'
 import { paginate } from '../../utils/paginate.js'
 
 export const STATUS_FILTER_OPTIONS = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
@@ -33,9 +32,9 @@ export function hasActiveFilters(filters) {
   )
 }
 
-function matchesSearch(order, query) {
+function matchesSearch(order, query, customers) {
   if (!query) return true
-  const customerName = getCustomerById(order.customerId)?.name?.toLowerCase() ?? ''
+  const customerName = customers.find((customer) => customer.id === order.customerId)?.name?.toLowerCase() ?? ''
   return order.id.toLowerCase().includes(query) || customerName.includes(query)
 }
 
@@ -62,14 +61,18 @@ function compareOrders(a, b, sort) {
   }
 }
 
-/** Applies search, status, and date filters, then sorts. Pure — safe to unit test directly. */
-export function filterAndSortOrders(orders, filters, now = new Date()) {
+/**
+ * Applies search, status, and date filters, then sorts. Pure — safe to unit test directly.
+ * `customers` is the live customer list (CustomersContext), so searching by name also finds customers
+ * created after the seed, e.g. at Storefront checkout.
+ */
+export function filterAndSortOrders(orders, filters, now = new Date(), customers = []) {
   const query = filters.search.trim().toLowerCase()
 
   const filtered = orders.filter((order) => {
     if (filters.status && filters.status !== 'All' && order.status !== filters.status) return false
     if (!matchesDateRange(order, filters.dateRange, now)) return false
-    if (!matchesSearch(order, query)) return false
+    if (!matchesSearch(order, query, customers)) return false
     return true
   })
 
