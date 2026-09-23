@@ -1,7 +1,7 @@
 import Drawer from '../common/Drawer.jsx'
 import StatusBadge from '../common/StatusBadge.jsx'
 import StatusTimeline from './StatusTimeline.jsx'
-import { getCustomerById } from '../../data/selectors.js'
+import { useCustomers } from '../../context/useCustomers.js'
 import { useProducts } from '../../context/useProducts.js'
 import { getNextStatus, canCancelOrder } from '../../context/orderStatus.js'
 import { formatDate } from '../../utils/date.js'
@@ -10,9 +10,12 @@ import './OrderDetailsDrawer.css'
 
 function OrderDetailsDrawer({ order, onClose, onUpdateStatus }) {
   const { products } = useProducts()
+  const { customers } = useCustomers()
   if (!order) return null
 
-  const customer = getCustomerById(order.customerId)
+  // Live lookup (not the static seed), so a customer created after page load — e.g. at Storefront
+  // checkout — shows their real name immediately instead of "Unknown customer".
+  const customer = customers.find((candidate) => candidate.id === order.customerId) ?? null
   const nextStatus = getNextStatus(order.status)
   const cancellable = canCancelOrder(order.status)
 

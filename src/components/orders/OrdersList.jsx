@@ -1,5 +1,5 @@
 import StatusBadge from '../common/StatusBadge.jsx'
-import { getCustomerById } from '../../data/selectors.js'
+import { useCustomers } from '../../context/useCustomers.js'
 import { formatDate } from '../../utils/date.js'
 import { formatCurrency } from '../../utils/format.js'
 import './OrdersList.css'
@@ -8,7 +8,14 @@ function getItemCount(order) {
   return order.items.reduce((sum, item) => sum + item.quantity, 0)
 }
 
+// Live lookup (not the static seed), so a customer created after page load — e.g. at Storefront
+// checkout — shows their real name immediately instead of "Unknown customer".
+function findCustomer(customers, customerId) {
+  return customers.find((candidate) => candidate.id === customerId) ?? null
+}
+
 function OrdersList({ orders, onSelectOrder }) {
+  const { customers } = useCustomers()
   return (
     <div className="orders-list">
       <div className="orders-list__table-wrap">
@@ -25,7 +32,7 @@ function OrdersList({ orders, onSelectOrder }) {
           </thead>
           <tbody>
             {orders.map((order) => {
-              const customer = getCustomerById(order.customerId)
+              const customer = findCustomer(customers, order.customerId)
               return (
                 <tr key={order.id}>
                   <td className="orders-list__id-cell">
@@ -54,7 +61,7 @@ function OrdersList({ orders, onSelectOrder }) {
 
       <ul className="orders-list__cards">
         {orders.map((order) => {
-          const customer = getCustomerById(order.customerId)
+          const customer = findCustomer(customers, order.customerId)
           return (
             <li key={order.id}>
               <button type="button" className="orders-list__card" onClick={() => onSelectOrder(order.id)}>

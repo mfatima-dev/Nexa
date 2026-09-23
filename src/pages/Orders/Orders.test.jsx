@@ -1,19 +1,57 @@
+import { useEffect, useRef } from 'react'
 import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { OrdersProvider } from '../../context/OrdersContext.jsx'
-import { ProductsProvider } from '../../context/ProductsContext.jsx'
+import { BusinessProviders } from '../../context/BusinessProviders.jsx'
+import { useCustomers } from '../../context/useCustomers.js'
+import { useOrders } from '../../context/useOrders.js'
 import { CUSTOMERS } from '../../data/customers.js'
 import Orders from './Orders.jsx'
 
-function renderOrders(initialEntry = '/orders') {
+// Real wiring (CustomersContext + ProductsContext + OrdersContext), same as the live app, so
+// `placeOrder` can validate a customerId against the live customer list.
+function renderOrders(initialEntry = '/orders', { initialCustomers } = {}) {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
-      <ProductsProvider>
-        <OrdersProvider>
-          <Orders />
-        </OrdersProvider>
-      </ProductsProvider>
+      <BusinessProviders initialCustomers={initialCustomers}>
+        <Orders />
+      </BusinessProviders>
+    </MemoryRouter>,
+  )
+}
+
+// Creates a customer and places an order for them, the same two calls the Storefront checkout makes,
+// so the test exercises the real integration path rather than hand-crafting state.
+function CreateCustomerAndOrder({ productId = 'p01', quantity = 1, onDone }) {
+  const { createCustomer } = useCustomers()
+  const { placeOrder } = useOrders()
+  const ranRef = useRef(false)
+
+  useEffect(() => {
+    if (ranRef.current) return
+    ranRef.current = true
+
+    const customerResult = createCustomer({
+      name: 'Jordan Rivera',
+      email: 'jordan.rivera@example.com',
+      phone: '555-0142',
+      shippingAddress: { street: '12 Birch Ln', city: 'Denver', state: 'CO', zip: '80202' },
+    })
+    const orderResult = placeOrder({ customerId: customerResult.customer.id, items: [{ productId, quantity }] })
+    onDone({ customer: customerResult.customer, order: orderResult.order })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return null
+}
+
+function renderOrdersWithNewCustomerOrder(onDone) {
+  return render(
+    <MemoryRouter initialEntries={['/orders']}>
+      <BusinessProviders>
+        <CreateCustomerAndOrder onDone={onDone} />
+        <Orders />
+      </BusinessProviders>
     </MemoryRouter>,
   )
 }
@@ -184,5 +222,34 @@ describe('Orders page deep links', () => {
     const rows = screen.getAllByRole('button', { name: /view order/i })
     expect(rows.length).toBeGreaterThan(0)
     rows.forEach((row) => expect(row.getAttribute('aria-label')).toContain(name))
+  })
+})
+
+describe('Orders page: a customer created after the seed', () => {
+  it('shows the real name in the orders list, not "Unknown customer"', () => {
+    let created
+    renderOrdersWithNewCustomerOrder((result) => {
+      created = result
+    })
+
+    const row = screen.getByRole('button', { name: new RegExp(`View order ${created.order.id} `) })
+    expect(row.getAttribute('aria-label')).toContain('Jordan Rivera')
+    expect(row.getAttribute('aria-label')).not.toContain('Unknown customer')
+    expect(within(row.closest('tr')).getByText('Jordan Rivera')).toBeInTheDocument()
+  })
+
+  it('shows the real name and email in the order details drawer, not "Unknown customer"', () => {
+    let created
+    renderOrdersWithNewCustomerOrder((result) => {
+      created = result
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`View order ${created.order.id} `) }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Jordan Rivera')).toBeInTheDocument()
+    expect(within(dialog).getByText('jordan.rivera@example.com')).toBeInTheDocument()
+    expect(within(dialog).getByText('Ships to Denver, CO')).toBeInTheDocument()
+    expect(within(dialog).queryByText('Unknown customer')).not.toBeInTheDocument()
   })
 })

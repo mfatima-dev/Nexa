@@ -1,21 +1,25 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render as rtlRender, screen } from '@testing-library/react'
+import { CustomersProvider } from '../../context/CustomersContext.jsx'
 import { ProductsProvider } from '../../context/ProductsContext.jsx'
 import OrderDetailsDrawer from './OrderDetailsDrawer.jsx'
-
-vi.mock('../../data/selectors.js', () => ({
-  getCustomerById: () => ({ name: 'Sarah Bennett', email: 'sarah.bennett@gmail.com', city: 'Austin', state: 'TX' }),
-}))
 
 const CATALOG = [
   { id: 'p01', name: 'Urban Backpack' },
   { id: 'p02', name: 'Travel Organizer' },
 ]
 
-// The drawer resolves product names from the live catalog, so every render needs the provider.
-function render(ui, catalog = CATALOG) {
+const CUSTOMERS = [{ id: 'c001', name: 'Sarah Bennett', email: 'sarah.bennett@gmail.com', city: 'Austin', state: 'TX' }]
+
+// The drawer resolves product names from the live catalog and the customer from live CustomersContext,
+// so every render needs both providers.
+function render(ui, { catalog = CATALOG, customers = CUSTOMERS } = {}) {
   return rtlRender(ui, {
-    wrapper: ({ children }) => <ProductsProvider initialProducts={catalog}>{children}</ProductsProvider>,
+    wrapper: ({ children }) => (
+      <CustomersProvider initialCustomers={customers}>
+        <ProductsProvider initialProducts={catalog}>{children}</ProductsProvider>
+      </CustomersProvider>
+    ),
   })
 }
 
