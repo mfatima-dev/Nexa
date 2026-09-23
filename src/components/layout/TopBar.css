@@ -74,6 +74,28 @@
   color: var(--color-text-subtle);
 }
 
+.topbar__storefront {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.topbar__storefront:hover {
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+}
+
 .topbar__user {
   display: flex;
   align-items: center;
@@ -127,6 +149,10 @@
 }
 
 @media (max-width: 560px) {
+  .topbar__storefront-label {
+    display: none;
+  }
+
   .topbar__user-name {
     display: none;
   }

@@ -1,5 +1,5 @@
-import { Bell, Menu, Search, User } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { Bell, Menu, Search, Store, User } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import IconButton from '../common/IconButton.jsx'
 import { NAV_ITEMS, SECONDARY_NAV_ITEMS } from './navItems.js'
 import './TopBar.css'
@@ -34,6 +34,11 @@ function TopBar({ onMenuClick }) {
           <Search size={16} className="topbar__search-icon" aria-hidden="true" />
           <input type="search" placeholder="Search orders, customers, products…" aria-label="Search" />
         </label>
+
+        <Link to="/store" className="topbar__storefront" aria-label="View Storefront">
+          <Store size={16} aria-hidden="true" />
+          <span className="topbar__storefront-label">View Storefront</span>
+        </Link>
 
         <IconButton icon={Bell} label="Notifications" variant="outline" />
 

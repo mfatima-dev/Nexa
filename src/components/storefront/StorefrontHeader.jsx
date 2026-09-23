@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Menu, ShoppingBag, X } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { PRODUCT_CATEGORIES } from '../../data/products.js'
 import { useCart } from '../../context/useCart.js'
 import './StorefrontHeader.css'
@@ -61,6 +61,9 @@ function StorefrontHeader() {
           </nav>
 
           <div className="sf-header__actions">
+            <Link to="/" className="sf-header__admin-link">
+              Admin Dashboard
+            </Link>
             <NavLink to="/store/cart" className="sf-header__cart" aria-label={`Cart, ${totalQuantity} items`}>
               <ShoppingBag size={19} strokeWidth={1.6} aria-hidden="true" />
               {totalQuantity > 0 && <span className="sf-header__cart-count">{totalQuantity}</span>}
@@ -99,6 +102,9 @@ function StorefrontHeader() {
             <NavLink to="/store/cart" className={navLinkClass} onClick={() => setMobileOpen(false)}>
               Cart{totalQuantity > 0 ? ` (${totalQuantity})` : ''}
             </NavLink>
+            <Link to="/" className="sf-mobile-nav__admin-link" onClick={() => setMobileOpen(false)}>
+              Admin Dashboard
+            </Link>
           </nav>
         </div>
       </div>

@@ -132,6 +132,17 @@
   gap: var(--space-4);
 }
 
+.sf-header__admin-link {
+  font-size: var(--sf-text-xs);
+  letter-spacing: 0.04em;
+  color: var(--sf-text-subtle);
+  transition: color var(--sf-transition);
+}
+
+.sf-header__admin-link:hover {
+  color: var(--sf-text);
+}
+
 .sf-header__cart {
   position: relative;
   display: inline-flex;
@@ -166,7 +177,8 @@
 }
 
 @media (max-width: 860px) {
-  .sf-header__nav {
+  .sf-header__nav,
+  .sf-header__admin-link {
     display: none;
   }
 
@@ -253,5 +265,11 @@
   font-size: var(--sf-text-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--sf-text-subtle);
+}
+
+.sf-mobile-nav__admin-link {
+  margin-top: var(--space-5);
+  font-size: var(--sf-text-sm);
   color: var(--sf-text-subtle);
 }
