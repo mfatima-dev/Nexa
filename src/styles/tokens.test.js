@@ -206,7 +206,15 @@ describe('design rules', () => {
     })
   })
 
-  const cssFiles = readdirSync(SRC, { recursive: true }).filter((file) => String(file).endsWith('.css')).map(String)
+  // The customer-facing Storefront (pages/Storefront, components/storefront) intentionally keeps its
+  // own separate token set — a fixed brand identity that must never change with the admin's theme —
+  // so it is exempt from the admin's one-design-system rules below. Its own stylesheets still define
+  // every `--sf-*` token they use; that just isn't this file's job to check.
+  const isStorefront = (file) => /^(pages[\\/]Storefront|components[\\/]storefront)[\\/]/.test(file)
+  const cssFiles = readdirSync(SRC, { recursive: true })
+    .filter((file) => String(file).endsWith('.css'))
+    .map(String)
+    .filter((file) => !isStorefront(file))
 
   it('finds the stylesheets it is checking', () => {
     expect(cssFiles.length).toBeGreaterThan(40)

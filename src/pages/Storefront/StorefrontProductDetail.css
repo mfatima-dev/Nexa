@@ -1,0 +1,128 @@
+.sf-detail {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.sf-detail__media,
+.sf-detail__info {
+  min-width: 0;
+}
+
+.sf-detail__media {
+  position: sticky;
+  top: 100px;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--sf-radius-lg);
+  overflow: hidden;
+  background: var(--sf-surface);
+}
+
+.sf-detail__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sf-detail__info {
+  padding-top: var(--space-2);
+}
+
+.sf-detail__name {
+  font-size: var(--sf-display-lg);
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.sf-detail__price {
+  font-size: var(--sf-text-lg);
+  color: var(--sf-text);
+  margin-bottom: var(--space-4);
+}
+
+.sf-detail__availability {
+  margin-bottom: var(--space-4);
+}
+
+.sf-detail__description {
+  font-size: var(--sf-text-md);
+  color: var(--sf-text-muted);
+  line-height: 1.7;
+  max-width: 46ch;
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--sf-border);
+}
+
+.sf-detail__stock-note {
+  font-size: var(--sf-text-sm);
+  color: var(--sf-text-subtle);
+  margin-bottom: var(--space-4);
+}
+
+.sf-detail__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sf-detail__add {
+  min-width: 190px;
+  padding: 14px 24px;
+}
+
+.sf-detail__message {
+  margin-top: var(--space-4);
+  font-size: var(--sf-text-sm);
+  color: var(--sf-success);
+}
+
+.sf-detail__cart-link {
+  display: inline-block;
+  margin-top: var(--space-5);
+  font-size: var(--sf-text-sm);
+  color: var(--sf-text-muted);
+  border-bottom: 1px solid var(--sf-border-strong);
+  padding-bottom: 2px;
+}
+
+.sf-detail__cart-link:hover {
+  color: var(--sf-text);
+}
+
+.sf-not-found {
+  text-align: center;
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.sf-not-found__copy {
+  color: var(--sf-text-muted);
+  max-width: 40ch;
+}
+
+@media (max-width: 860px) {
+  .sf-detail {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .sf-detail__media {
+    position: static;
+  }
+
+  .sf-detail__actions {
+    flex-wrap: wrap;
+  }
+
+  .sf-detail__add {
+    flex: 1;
+    min-width: 160px;
+  }
+}

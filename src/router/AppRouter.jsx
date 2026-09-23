@@ -7,10 +7,28 @@ import Products from '../pages/Products/Products.jsx'
 import Inventory from '../pages/Inventory/Inventory.jsx'
 import Analytics from '../pages/Analytics/Analytics.jsx'
 import Settings from '../pages/Settings/Settings.jsx'
+import StorefrontLayout from '../pages/Storefront/StorefrontLayout.jsx'
+import StorefrontHome from '../pages/Storefront/StorefrontHome.jsx'
+import StorefrontShop from '../pages/Storefront/StorefrontShop.jsx'
+import StorefrontProductDetail from '../pages/Storefront/StorefrontProductDetail.jsx'
+import StorefrontCart from '../pages/Storefront/StorefrontCart.jsx'
+import StorefrontCheckout from '../pages/Storefront/StorefrontCheckout.jsx'
+import StorefrontAbout from '../pages/Storefront/StorefrontAbout.jsx'
 
 function AppRouter() {
   return (
     <Routes>
+      {/* Customer-facing Storefront: its own layout and header, no admin sidebar. */}
+      <Route path="/store" element={<StorefrontLayout />}>
+        <Route index element={<StorefrontHome />} />
+        <Route path="shop" element={<StorefrontShop />} />
+        <Route path="product/:productId" element={<StorefrontProductDetail />} />
+        <Route path="cart" element={<StorefrontCart />} />
+        <Route path="checkout" element={<StorefrontCheckout />} />
+        <Route path="about" element={<StorefrontAbout />} />
+      </Route>
+
+      {/* Admin operations app: unchanged. */}
       <Route element={<AppShell />}>
         <Route index element={<Overview />} />
         <Route path="orders" element={<Orders />} />
