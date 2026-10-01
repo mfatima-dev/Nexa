@@ -59,25 +59,24 @@ function StorefrontHeader() {
               About
             </NavLink>
           </nav>
-
-          <div className="sf-header__actions">
-            <Link to="/" className="sf-header__admin-link">
-              Admin Dashboard
-            </Link>
-            <NavLink to="/store/cart" className="sf-header__cart" aria-label={`Cart, ${totalQuantity} items`}>
-              <ShoppingBag size={19} strokeWidth={1.6} aria-hidden="true" />
-              {totalQuantity > 0 && <span className="sf-header__cart-count">{totalQuantity}</span>}
-            </NavLink>
-            <button
-              type="button"
-              className="sf-header__menu-btn"
-              aria-label="Open menu"
-              aria-expanded={mobileOpen}
-              onClick={() => setMobileOpen(true)}
-            >
-              <Menu size={22} strokeWidth={1.6} aria-hidden="true" />
-            </button>
-          </div>
+<div className="sf-header__actions">
+  <Link to="/dashboard" className="sf-header__admin-link">
+    Admin Dashboard
+  </Link>
+  <NavLink to="/store/cart" className="sf-header__cart" aria-label={`Cart, ${totalQuantity} items`}>
+    <ShoppingBag size={19} strokeWidth={1.6} aria-hidden="true" />
+    {totalQuantity > 0 && <span className="sf-header__cart-count">{totalQuantity}</span>}
+  </NavLink>
+  <button
+    type="button"
+    className="sf-header__menu-btn"
+    aria-label="Open menu"
+    aria-expanded={mobileOpen}
+    onClick={() => setMobileOpen(true)}
+  >
+    <Menu size={22} strokeWidth={1.6} aria-hidden="true" />
+  </button>
+</div>
         </div>
       </header>
 

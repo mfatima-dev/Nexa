@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from '../components/layout/AppShell.jsx'
 import Overview from '../pages/Overview/Overview.jsx'
 import Orders from '../pages/Orders/Orders.jsx'
@@ -18,7 +18,10 @@ import StorefrontAbout from '../pages/Storefront/StorefrontAbout.jsx'
 function AppRouter() {
   return (
     <Routes>
-      {/* Customer-facing Storefront: its own layout and header, no admin sidebar. */}
+      {/* Public entry: open the customer-facing Storefront first. */}
+      <Route path="/" element={<Navigate to="/store" replace />} />
+
+      {/* Customer-facing Storefront */}
       <Route path="/store" element={<StorefrontLayout />}>
         <Route index element={<StorefrontHome />} />
         <Route path="shop" element={<StorefrontShop />} />
@@ -28,15 +31,15 @@ function AppRouter() {
         <Route path="about" element={<StorefrontAbout />} />
       </Route>
 
-      {/* Admin operations app: unchanged. */}
+      {/* Admin operations app */}
       <Route element={<AppShell />}>
-        <Route index element={<Overview />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="customers" element={<Customers />} />
-        <Route path="products" element={<Products />} />
-        <Route path="inventory" element={<Inventory />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="/dashboard" element={<Overview />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   )
