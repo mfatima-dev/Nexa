@@ -101,7 +101,7 @@ function StorefrontHeader() {
             <NavLink to="/store/cart" className={navLinkClass} onClick={() => setMobileOpen(false)}>
               Cart{totalQuantity > 0 ? ` (${totalQuantity})` : ''}
             </NavLink>
-            <Link to="/" className="sf-mobile-nav__admin-link" onClick={() => setMobileOpen(false)}>
+            <Link to="/dashboard" className="sf-mobile-nav__admin-link" onClick={() => setMobileOpen(false)}>
               Admin Dashboard
             </Link>
           </nav>
